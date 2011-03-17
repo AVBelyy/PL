@@ -19,6 +19,7 @@ putc:
 	mov r1 r0
 	push 3
 	int 0x05
+	ret
 puts:
 	mov r1 r0
 	push 4
