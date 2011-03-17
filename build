@@ -1,0 +1,122 @@
+#!/bin/sh
+
+cc=g++
+cflags=
+ldflags=
+
+valid_target=
+hal=
+halname=
+inc=
+
+if test -z "$1"; then
+	target=unix
+else
+	target=$1
+fi
+
+for x in avr win32 unix dos; do
+	if [ $x = $target ]; then
+		valid_target='true';
+	fi
+done
+if [ "$target" = "avr" ]; then
+	platform=1
+	cc=avr-g++
+	cflags="-mmcu=at90usb1286 "
+	halname=at90usb1286
+	hal="avr-gcc -c -Ihal/$halname -D__AVR_AT90USB1286__ -DF_CPU=16000000 -DUSB_SERIAL hal/$halname/usb.c hal/$halname/pins_teensy.c -Os -w -mmcu=at90usb1286"
+	inc="-D__AVR_AT90USB1286__ -DF_CPU=16000000 -DUSB_SERIAL -include hal/at90usb1286/hal.h "
+elif [ "$target" = "win32" ]; then
+	platform=2
+	hal=
+elif [ "$target" = "unix" ]; then
+	platform=3
+	hal=
+elif [ "$target" = "dos" ]; then
+	platform=4
+	hal=
+else
+	echo $0: target \'$target\' unsupported by kernel
+	exit 1
+fi
+
+printf "Compiler: $cc\nCFlags: $cflags\n\n"
+
+if [ -n "$halname" ]; then
+	printf "Compiling HAL ($halname).. "
+	$hal >/dev/null 2>build.err
+	if [ "$?" -eq 0 ]; then
+		echo OK
+		echo
+	else
+		echo ERROR
+		exit 1
+	fi
+fi
+
+printf " = Libraries =\n"
+for dirs in lib/*$target*; do
+	if [ -d $dirs ]; then
+		for name in $dirs/*/*.cpp; do
+			printf "Compiling $name.. "
+			linker=`dirname $name`'/linker.opt'
+			if [ -f $linker ]; then
+				ldflags+=`cat $linker`" "
+			fi
+			compiler=`dirname $name`'/compiler.opt'
+			if [ -f $compiler ]; then
+				compilerOpts=`cat $compiler`
+			else
+				compilerOpts=
+			fi
+			$cc -c $name -w -Isrc -Os -Ilib -DPLATFORM=$platform $cflags $compilerOpts >/dev/null 2>build.err
+			if [ "$?" -eq 0 ]; then
+				echo OK
+			else
+				echo ERROR
+				exit 1
+			fi
+		done
+		for name in $dirs/*/*.h; do inc=$inc'-include '$name' '; done
+	fi
+done
+echo
+
+printf "Compiling kernel.. "
+$cc -c src/interpretter.cpp src/kernel.cpp -w -Os -Isrc -Ihal/$halname $inc -DPLATFORM=$platform $cflags >/dev/null 2>build.err
+if [ "$?" -eq 0 ]; then
+	echo OK
+else
+	echo ERROR
+	exit 1
+fi
+printf "Building kernel.. "
+$cc *.o -okernel $cflags $ldflags >/dev/null 2>build.err
+if [ "$target" = "avr" ]; then
+	avr-objcopy -O ihex kernel kernel.hex
+	rm kernel
+fi
+if [ "$?" -eq 0 ]; then
+	echo OK
+else
+	echo ERROR
+	exit 1
+fi
+rm *.o
+
+if [ -d apps ]; then
+	printf "\n = Apps =\n"
+	for app in apps/*.asm; do	
+		name=$(echo `basename $app` | cut -d'.' -f1)
+		printf "Compiling `basename $app`.. "
+		python compiler.py $name >/dev/null
+		if [ "$?" -eq 0 ]; then
+			echo OK
+		else
+			echo ERROR
+		fi
+	done
+fi
+
+rm *.inc
