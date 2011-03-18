@@ -1,0 +1,8 @@
+*.swp
+*.pyc
+*.o
+*.inc
+*.bin
+kernel*
+loader*
+build.err
