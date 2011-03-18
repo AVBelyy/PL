@@ -322,6 +322,8 @@ def parse(ln):
 				sectionLength["data"] += 2;
 				buf = chr(cint >> 8) + chr(cint & 0xff)
 				variable["size"] = 2
+			elif vartype == "struct":
+				print "Struct detected"
 			varTable.append(variable);
 		elif curSection == "import":
 			cmds = ln.split(",")
