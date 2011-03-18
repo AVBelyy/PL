@@ -40,7 +40,7 @@ curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "data": 0}, {"
 reservedSections = ("header", "data", "const", "import", "export", "code")
 header = {"name": "", "library": False}
 varTable, constTable, labelTable, procTable = [], [], [], []
-exportTable, importTable = [], []
+exportTable, importTable, curLibrary = [], [], ""
 constStrCounter = 0
 outpath = ""
 
@@ -194,7 +194,7 @@ def getcstr(cstr): # parse const string in DATA section
 	return out
 
 def parse(ln):
-	global curSection
+	global curLibrary, curSection
 	ln = ln.strip()
 	if not ln: return
 	if ln[-1] == ":": # label
@@ -307,8 +307,8 @@ def parse(ln):
 				sectionLength[curSection] += 1
 		elif curSection == "data":
 			tokens = re.split("\\s+", ln, 2)
-			vartype = tokens[0].lower()
-			varname = tokens[1]
+			vartype = tokens[1].lower()
+			varname = tokens[0]
 			variable = {"name": varname, "type": vartype, "start": sectionLength["data"], "size": 0}
 			if vartype == "string":
 				try:
@@ -328,8 +328,8 @@ def parse(ln):
 			for x in cmds:
 				cmd = re.split("\\s+", x, 2)
 				if not cmd[0]: del cmd[0]
-				if cmd[0].lower() == "include":
-					filename = ln[7:].strip()
+				if cmd[0].lower() == "from":
+					filename = ln[4:].strip()
 					if filename[0] == filename[-1] == '"': filename = filename[1:-1]
 					# include definitions from file
 					try:	o = open(filename, "rb")
@@ -337,6 +337,7 @@ def parse(ln):
 						error("Ошибка ввода\вывода", "невозможно открыть файл '%s'" % filename, "проверьте корректность имени файла")
 					lib_byte = ord(o.read(1))
 					name = o.read(lib_byte & 0x1f)
+					curLibrary = name
 					for x in xrange(ord(o.read(1))):
 						vartype = ord(o.read(1))
 						varid = o.read(2)
@@ -345,7 +346,7 @@ def parse(ln):
 						importTable.append({"library": name, "type": vartype, "id": varid, "name": varname})
 				else:
 					# search variable in import table
-					libname, varname = cmd[0].split("::")
+					libname, varname = curLibrary, cmd[0]
 					for x in importTable:
 						if x["library"] + x["name"] == libname + varname:
 							try:
