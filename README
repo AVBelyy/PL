@@ -3,3 +3,5 @@ This project includes compiler and interpretter
 You can build interpretter to use in this platforms: UNIX WIN32 AVR DOS
 
 For more information, contact me: anton.belyy@gmail.com
+
+Tags: arduino avr gcc programming language
