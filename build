@@ -4,7 +4,6 @@ cc=g++
 cflags=
 ldflags=
 
-valid_target=
 hal=
 halname=
 inc=
@@ -15,11 +14,6 @@ else
 	target=$1
 fi
 
-for x in avr win32 unix dos; do
-	if [ $x = $target ]; then
-		valid_target='true';
-	fi
-done
 if [ "$target" = "avr" ]; then
 	platform=1
 	cc=avr-g++
@@ -29,13 +23,10 @@ if [ "$target" = "avr" ]; then
 	inc="-D__AVR_AT90USB1286__ -DF_CPU=16000000 -DUSB_SERIAL -include hal/at90usb1286/hal.h "
 elif [ "$target" = "win32" ]; then
 	platform=2
-	hal=
 elif [ "$target" = "unix" ]; then
 	platform=3
-	hal=
 elif [ "$target" = "dos" ]; then
 	platform=4
-	hal=
 else
 	echo $0: target \'$target\' unsupported by kernel
 	exit 1
