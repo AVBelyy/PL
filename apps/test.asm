@@ -1,11 +1,15 @@
 import:
 	from "libstd.inc"
-	putc, puts, gets
+		putc, puts, gets
 data:
-	buf	string	fill(20)
-	number	int	0x40
+	process	struct
+		pid		int
+		name	string[16]
+	ends
+	main	process
 code:
 	call puts("What's ur name, bro? ")
-	call gets(buf)
+	call gets(main.name)
 	call puts("So, hello, ")
-	call puts(buf)
+	call puts(main.name)
+	call putc('\n')

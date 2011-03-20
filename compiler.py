@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# -*- coding: utf-8 
+#!/usr/bin/env python
 
 #
 #	(C) Anton Belyy, 2011
@@ -40,16 +39,19 @@ curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "data": 0}, {"
 reservedSections = ("header", "data", "const", "import", "export", "code")
 header = {"name": "", "library": False}
 varTable, constTable, labelTable, procTable = [], [], [], []
+structTable, structPtr = [], -1
 exportTable, importTable, curLibrary = [], [], ""
 constStrCounter = 0
 outpath = ""
 
-def error(errtype, msg, solution):
-	print "Файл \"%s\", строка %i, %s \"%s\"\n  %s: %s\n  Возможное решение: %s" % (outpath and (outpath + ".asm") or "None", curLine, curSection in reservedSections and "секция" or "процедура", curSection, errtype, msg, solution)
-	exit(1)
+class CompileError(Exception):
+	def __init__(self, value):
+		self.value = value
+	def __str__(self):
+		return repr(self.value)
 
 try:	outpath = argv[1]
-except:	error("Ошибка компиляции", "не указано имя файла для компиляции", "укажите в командной строке имя файла, который нужно\n  скомпилировать")
+except:	raise CompileError, "no input files"
 
 def splitln(ln):
 	ln = re.sub('"[^"]*"', lambda x: x.group(0).replace(" ", "%%_SPACE_%%").replace("\t", "%%_TAB_%%"), ln)
@@ -92,15 +94,7 @@ def varinfo(var):
 
 def checkop(operand, flags):
 	if not operand["flags"] in flags:
-		solution = "попробуйте использовать операнд следующего типа:"
-		for x in flags:
-			if x == 0: solution += "\n   * целочисленная константа (const int)"
-			if x == 1: solution += "\n   * символ (char)"
-			if x == 2: solution += "\n   * целое число (int)"
-			if x == 3: solution += "\n   * указатель на регистр (register*)"
- 			if x == 4: solution += "\n   * регистр (register)"
-			if x == 5: solution += "\n   * указатель на процедуру (void(*)())"
-		error("Ошибка типов", "неверный тип операнда", solution)
+		raise TypeError, "incorrect operand type"
 
 def getop(op):
 	operand = {"flags": 0, "value": 0}
@@ -108,16 +102,14 @@ def getop(op):
 	for x in constTable:
 		if x[0] == op: return getop(x[1])
 	try:
-		try:
-			args = splitln(op[op.index("("):].strip()[1:-1])
-			for x in args:
-				if x.strip(): parse("PUSH " + x)
-			op = op[:op.index("(")].strip()
-			operand["flags"] = 4
-		except: pass
-		if op in [proc["name"] for proc in procTable]:
-			return {"flags": operand["flags"] or 5, "value": 0, "id": procTable[procid(op)]["id"]}
+		args = splitln(op[op.index("("):].strip()[1:-1])
+		for x in args:
+			if x.strip(): parse("PUSH " + x)
+		op = op[:op.index("(")].strip()
+		operand["flags"] = 4
 	except: pass
+	if op in [proc["name"] for proc in procTable]:
+		return {"flags": operand["flags"] or 5, "value": 0, "id": procTable[procid(op)]["id"]}
 	try:
 		op_int = int(op)
 	except:
@@ -133,6 +125,21 @@ def getop(op):
 			return {"flags": 0, "value": sectionLength["data"] - len(op)}
 		# ...or const char?
 		if op[0] == op[-1] == "'": return {"flags": 0, "value": getcint(op)}
+		# i think it's member of struct
+		if op.find(".") != 1:
+			try:
+				struct, member = (re.sub("\\s*", "", token) for token in op.split("."))
+				# search structure members
+				info = [(s["sname"], s["start"]) for s in varTable if s["name"] == struct.lower()][0]
+				members = [s for s in structTable if s["name"] == info[0].lower()][0]["members"]
+				offset = 0
+				for m in members: 
+					if m[0] == member:
+						operand["value"] = info[1] + offset
+						return operand
+					else:
+						offset += m[2]
+			except: pass
 		if op[0] == "&": op, operand["flags"] = op[1:], 1
 		if len(op) == 2 and op[0].lower() == "r" and ord(op[1]) in xrange(48, 58):
 			return {"flags": (not operand["flags"]) + 3, "value": int(op[1])}
@@ -142,9 +149,26 @@ def getop(op):
 				operand["value"] = x["start"]
 				return operand
 		if op[:2] not in ("0x", "0b"):
-			error("Ошибка именования", "неизвестная переменная '%s'" % op.strip(), "исправьте имя переменной в программе")
+			raise NameError, "undefined variable '%s'" % op.strip()
 	operand["value"] = getcint(op)
 	return operand
+
+def sizeof(t):
+	if re.match("string", t):		# is it string?
+		try:
+			size = int(re.search("(?<=string\[).*(?=\])", t).group(0))
+			if size < 0:
+				raise TypeError, "strings can't be negative or zero-length"
+			else:
+				return size
+		except:
+			raise TypeError, "can't get length of type '%s'" % t
+	elif t == "int": return 2		# or integer?
+	elif t in (struct["name"] for struct in structTable):		# or may be structure?
+		members = [struct for struct in structTable if struct["name"] == t][0]["members"]
+		return reduce(lambda x, y: x+y, [member[2] for member in members])
+	else:		# so, what is it?
+		raise TypeError, "can't get length of type '%s'" % t
 
 def parsecond(cond):
 	cond = cond.strip()
@@ -190,18 +214,18 @@ def getcstr(cstr): # parse const string in DATA section
 		except:	symbol = 0
 		if fx == 0: return "\0"
 		if fx["name"] == "fill":
-			for x in xrange(getcint(fx["args"][0])): out += chr(symbol)
+			out = chr(symbol) * getcint(fx["args"][0])
 	return out
 
 def parse(ln):
-	global curLibrary, curSection
+	global curLibrary, curSection, structPtr
 	ln = ln.strip()
 	if not ln: return
 	if ln[-1] == ":": # label
 		curSection = ln[:-1].strip().lower()
 		if curSection not in reservedSections: # is procedure
 			if curSection in [proc["name"] for proc in procTable]: # already defined
-				error("Ошибка именования", "процедура уже описана в этом модуле", "исключите одно из описаний процедуры")
+				raise NameError, "duplicate definition of procedure '%s'" % curSection
 			procTable.append({"global": False, "name": curSection, "id": len(procTable)})
 		try:
 			if sections[curSection]: pass
@@ -307,15 +331,34 @@ def parse(ln):
 				sectionLength[curSection] += 1
 		elif curSection == "data":
 			tokens = re.split("\\s+", ln, 2)
+			if tokens[0].lower() == "ends":
+				structPtr = -1
+				return
+			if structPtr != -1:
+				vartype = tokens[1].lower()
+				varname = tokens[0]
+				structTable[structPtr]["members"].append((varname, vartype, sizeof(vartype)))
+				return
 			vartype = tokens[1].lower()
 			varname = tokens[0]
 			variable = {"name": varname, "type": vartype, "start": sectionLength["data"], "size": 0}
-			if vartype == "string":
-				try:
-					buf = getcstr(tokens[2])
-					sectionLength["data"] += len(buf)
-					variable["size"] = len(buf)
-				except: pass
+			if re.match("string", vartype):
+				buf, flag = "", 0
+				try: # if string has fixed length
+					buf = "\0" * sizeof(vartype)
+				except: flag += 1
+				try: #if string has initial value
+					if len(buf):
+						buflen = len(buf)
+						buf = getcstr(tokens[2])[:buflen-1] + "\0"
+					else:
+						buf = getcstr(tokens[2])
+				except: flag += 1
+				if flag == 2:
+					raise TypeError, "can't get length of string '%s'" % varname
+				sectionLength["data"] += len(buf)
+				variable["size"] = len(buf)
+				variable["type"] = "string"
 			elif vartype == "int":
 				try:	cint = getcint(tokens[2])
 				except:	cint = 0
@@ -323,8 +366,16 @@ def parse(ln):
 				buf = chr(cint >> 8) + chr(cint & 0xff)
 				variable["size"] = 2
 			elif vartype == "struct":
-				print "Struct detected"
-			varTable.append(variable);
+				structTable.append({"name": varname, "members": []})
+				structPtr = len(structTable)-1
+			elif vartype in (struct["name"] for struct in structTable):
+				size = sizeof(vartype)
+				buf = "\0" * size
+				sectionLength["data"] += len(buf)
+				variable["sname"] = vartype
+				variable["size"] = size
+				variable["type"] = "string"
+			if buf: varTable.append(variable);
 		elif curSection == "import":
 			cmds = ln.split(",")
 			for x in cmds:
@@ -336,7 +387,7 @@ def parse(ln):
 					# include definitions from file
 					try:	o = open(filename, "rb")
 					except:
-						error("Ошибка ввода\вывода", "невозможно открыть файл '%s'" % filename, "проверьте корректность имени файла")
+						raise IOError,"can't open file '%s'" % filename
 					lib_byte = ord(o.read(1))
 					name = o.read(lib_byte & 0x1f)
 					curLibrary = name
@@ -354,7 +405,7 @@ def parse(ln):
 							try:
 								concat = ""
 								for y in cmd: concat += y + " "
-								concat = concat.split("=>")
+								concat = concat.split("as")
 								if concat[1]: varname = concat[1].strip()
 							except: pass
 							if x["type"] == 0:   # int
@@ -365,14 +416,14 @@ def parse(ln):
 								procTable.append({"global": True, "name": varname, "id": x["id"]})
 		elif curSection == "export":
 			if not header["library"]:
-				error("Ошибка компиляции", "приложение не может иметь EXPORT-секцию", "перенесите глобальные переменные вашей программы\n                     во внешнюю библиотеку или объявите их локальными")
+				raise CompileError, "application can't have 'export' section"
 			vars = ln.split(",")
 			for x in vars:
-				var = x.strip().split("=>")
+				var = x.strip().split("as")
 				info = varinfo(var[0].strip())
 				if len(var) == 2: info["name"] = var[1].strip()
 				if not info:
-					error("Ошибка именования", "неизвестная переменная '%s'" % var[0].strip(), "исправьте имя переменной в программе")
+					raise NameError, "undefined variable '%s'" % var[0].strip()
 				exportTable.append(info)
 		if not buf: return
 		sections[curSection].append(buf)
@@ -389,11 +440,11 @@ f.close()
 o = open(outpath + ".bin", "wb")
 #first of all, write header
 if header["library"] and not header["name"]:
-	error("Ошибка компиляции", "библиотека должна иметь имя", "укажите имя библиотеки в секции HEADER")
+	raise CompileError, "library must have a name"
 if len(header["name"]) > 15:
-	error("Ошибка компиляции", "имя программы превышает 15 символов", "исправьте имя программы")
+	raise CompileError, "program name can't be longer then 15 symbols"
 if header["library"] and not (0 <= header["library"]["pid"] < 64):
-	error("Ошибка компиляции", "PID статической библиотеки имеет неверное значение", "проверьте, лежит ли PID в пределах от 0 до 63")
+	raise CompileError, "incorrect PID"
 
 o.write(chr(len(header["name"])) + header["name"])
 # calucate data size
@@ -463,5 +514,5 @@ if header["library"]:
 		o.write(chr(len(x["name"])) + x["name"])
 	o.close()
 
-print "%s.asm: успешно скомпилировано (%i байт, %f с)" % (outpath, getsize(outpath + ".bin"), time() - start)
+print "%s.asm: successfully compiled (%i bytes, %f s)" % (outpath, getsize(outpath + ".bin"), time() - start)
 exit(0)

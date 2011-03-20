@@ -85,7 +85,6 @@ gets:
 	int 0x01
 	if (r0 == 1) ret
 	if (r0 == 3) ret
-//	call putc( '\r' )
 	call putc( '\n' )
 	ret
 export:
