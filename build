@@ -99,9 +99,9 @@ rm *.o
 if [ -d apps ]; then
 	printf "\n = Apps =\n"
 	for app in apps/*.asm; do	
-		name=$(echo `basename $app` | cut -d'.' -f1)
+		name=$(echo $app | cut -d'.' -f1)
 		printf "Compiling `basename $app`.. "
-		python compiler.py $name >/dev/null
+		python compiler.py $name -Iinclude >/dev/null 2>build.err
 		if [ "$?" -eq 0 ]; then
 			echo OK
 		else
@@ -110,4 +110,4 @@ if [ -d apps ]; then
 	done
 fi
 
-rm *.inc
+rm *.def

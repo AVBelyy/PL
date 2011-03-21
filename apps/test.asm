@@ -1,15 +1,17 @@
+#include <libstd.inc>
+
 import:
-	from "libstd.inc"
+	from "libstd.def"
 		putc, puts, gets
+		atoi, itoa
 data:
-	process	struct
-		pid		int
-		name	string[16]
-	ends
-	main	process
+	buffer	string[100]
+	self	process
 code:
-	call puts("What's ur name, bro? ")
-	call gets(main.name)
-	call puts("So, hello, ")
-	call puts(main.name)
+	mov		self.pid	4512
+	mov		r0			self.pid
+	call itoa(buffer self.pid)
+	call puts("NUMBER = ")
+	call puts(buffer)
 	call putc('\n')
+

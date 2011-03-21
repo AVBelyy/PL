@@ -10,9 +10,6 @@
 
 #define ENABLE_KEYBOARD_SUPPORT			1
 
-
-
-
 // Disable ncurses's getch()
 #ifdef CURSES
 	#undef getch()
@@ -58,5 +55,11 @@
 	long int ftell(FILE*);
 	int fputs(const char*, FILE*);
 #endif
+
+class Stdio {
+	public:
+	static void interrupt(process*);
+	Stdio();
+};
 
 #endif

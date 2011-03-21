@@ -7,7 +7,8 @@
 import re
 from sys import argv, exit
 from time import time
-from os.path import getsize
+from os.path import isfile, abspath, exists, join, basename, getsize
+from os import environ, pathsep
 from string import whitespace
 
 # constants
@@ -41,8 +42,9 @@ header = {"name": "", "library": False}
 varTable, constTable, labelTable, procTable = [], [], [], []
 structTable, structPtr = [], -1
 exportTable, importTable, curLibrary = [], [], ""
+includes, incLevel = [], 0
 constStrCounter = 0
-outpath = ""
+path, outpath = environ["PATH"].split(pathsep), ""
 
 class CompileError(Exception):
 	def __init__(self, value):
@@ -50,8 +52,11 @@ class CompileError(Exception):
 	def __str__(self):
 		return repr(self.value)
 
-try:	outpath = argv[1]
-except:	raise CompileError, "no input files"
+def search_file(filename, paths):
+	for path in paths:
+		if exists(join(path, filename)):
+			return abspath(join(path, filename))
+	raise IOError, "file not found"
 
 def splitln(ln):
 	ln = re.sub('"[^"]*"', lambda x: x.group(0).replace(" ", "%%_SPACE_%%").replace("\t", "%%_TAB_%%"), ln)
@@ -134,9 +139,8 @@ def getop(op):
 				members = [s for s in structTable if s["name"] == info[0].lower()][0]["members"]
 				offset = 0
 				for m in members: 
-					if m[0] == member:
-						operand["value"] = info[1] + offset
-						return operand
+					if m[0] == member: 	
+						return {"flags": 2 if m[1] == "int" else 1, "value": info[1] + offset}
 					else:
 						offset += m[2]
 			except: pass
@@ -219,6 +223,7 @@ def getcstr(cstr): # parse const string in DATA section
 
 def parse(ln):
 	global curLibrary, curSection, structPtr
+	global includes, incLevel
 	ln = ln.strip()
 	if not ln: return
 	if ln[-1] == ":": # label
@@ -232,6 +237,31 @@ def parse(ln):
 		except:
 			sections[curSection] = []
 			sectionLength[curSection] = 0		
+	elif ln[:8].lower() == "#include":
+		try:
+			filename = re.split("\\s*", ln)[1]
+		except:
+			raise CompileError, "specify name of including file"
+		if filename[0] + filename[-1] == "<>":
+			filename = '"' + search_file(filename[1:-1].strip(), path) + '"'
+		if filename[0] == filename[-1] == '"':
+			filename = filename[1:-1].strip()
+			try:
+				f = open(filename, "r")
+			except:
+				raise IOError, "error while including file '%s'" % filename
+			incLevel += 1
+			includes.append((f, curSection))
+			line = " "
+			while line:
+				line = f.readline()
+				parse(line)
+			f.close()
+			curSection = includes[incLevel][1]
+			incLevel -= 1
+			includes.pop()
+		else:
+			raise CompileError, "incorrect filename format"
 	else: # command
 		buf = []
 		if curSection == "header":
@@ -273,7 +303,7 @@ def parse(ln):
 				checkop(operand, xrange(5))
 				buf.append(operand["flags"])
 				buf.append(operand["value"] >> 8)
-				buf.append(operand["value"] & 0xff)
+				buf.append(operand["value"] & 0xff)	
 				sectionLength[curSection] += 5
 			if tokens[0] in ("mov", "movf"): #1 and #2 - any data
 				buf.append(sectionLength[curSection]) # information for bin writer - command offset
@@ -337,7 +367,10 @@ def parse(ln):
 			if structPtr != -1:
 				vartype = tokens[1].lower()
 				varname = tokens[0]
-				structTable[structPtr]["members"].append((varname, vartype, sizeof(vartype)))
+				size = sizeof(vartype)
+				if re.match("string", vartype):
+					vartype = "string"
+				structTable[structPtr]["members"].append((varname, vartype, size))
 				return
 			vartype = tokens[1].lower()
 			varname = tokens[0]
@@ -375,6 +408,8 @@ def parse(ln):
 				variable["sname"] = vartype
 				variable["size"] = size
 				variable["type"] = "string"
+			else:
+				raise TypeError, "variable '%s' declared with undefined type '%s'" % (varname, vartype)
 			if buf: varTable.append(variable);
 		elif curSection == "import":
 			cmds = ln.split(",")
@@ -421,6 +456,8 @@ def parse(ln):
 			for x in vars:
 				var = x.strip().split("as")
 				info = varinfo(var[0].strip())
+				if info["type"] != "procedure":
+					raise CompileError, "only procedures can be exported"
 				if len(var) == 2: info["name"] = var[1].strip()
 				if not info:
 					raise NameError, "undefined variable '%s'" % var[0].strip()
@@ -428,16 +465,24 @@ def parse(ln):
 		if not buf: return
 		sections[curSection].append(buf)
 
+for arg in argv[1:]:
+	if isfile(arg + ".asm"):
+		outpath = arg
+	elif arg[:2] == "-I":
+		path += [abspath(p) for p in arg[2:].split(pathsep)]
+if outpath == "":
+	raise CompileError, "no input files"
+
 start = time()
-f, ln = open("apps/" + outpath + ".asm", "r"), " "
+f, ln = open(outpath + ".asm", "r"), " "
+includes.append((f, ""))
 while ln:
 	ln = f.readline()
-	curLine += 1
 	parse(ln)
 f.close()
 
 #write data to file
-o = open(outpath + ".bin", "wb")
+o = open(basename(outpath) + ".bin", "wb")
 #first of all, write header
 if header["library"] and not header["name"]:
 	raise CompileError, "library must have a name"
@@ -499,7 +544,7 @@ o.close()
 
 #generate .INC file
 if header["library"]:
-	o = open(outpath + ".inc", "wb")
+	o = open(basename(outpath) + ".def", "wb")
 	lib_byte = header["library"]["static"] * 0x80 | len(header["name"])
 	o.write(chr(lib_byte) + header["name"])
 	o.write(chr(len(exportTable)))
@@ -514,5 +559,5 @@ if header["library"]:
 		o.write(chr(len(x["name"])) + x["name"])
 	o.close()
 
-print "%s.asm: successfully compiled (%i bytes, %f s)" % (outpath, getsize(outpath + ".bin"), time() - start)
+print "%s.asm: successfully compiled (%i bytes, %f s)" % (outpath, getsize(basename(outpath) + ".bin"), time() - start)
 exit(0)

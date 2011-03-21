@@ -1,10 +1,6 @@
 #include <kernel.h>
 #include <interpretter.h>
 
-Lib::Lib(void (*main)()) {
-	main();
-}
-
 int main() {
 	// initialize
 	for(uint8_t i = 0; i < MAX_PROCESS; i++) plist[i] = (process*)malloc(sizeof(process*));

@@ -45,15 +45,15 @@ process::process(char *path) {
 uint16_t process::fgetint() {
 	return (fgetc((FILE*)owner->f) << 8) + fgetc((FILE*)owner->f);
 }
-p_operand process::getop(bool ReturnRegPtr) {
+p_operand process::getop(bool ReturnPtr) {
 	p_operand op;
 	op.type = fgetc((FILE*)owner->f);
 	op.value = fgetint();
 	if(op.type == OP_CHAR) op.value = mem[op.value];
-	else if(op.type == OP_INT) op.value = (mem[op.value] << 8) + mem[op.value+1];
-	else if(op.type == OP_REG && !ReturnRegPtr) op.value = regs[op.value];
+	else if(op.type == OP_INT && !ReturnPtr) op.value = (mem[op.value] << 8) + mem[op.value+1];
+	else if(op.type == OP_REG && !ReturnPtr) op.value = regs[op.value];
 	else if(op.type == OP_REGPTR)
-		if(ReturnRegPtr) op.value = regs[op.value];
+		if(ReturnPtr) op.value = regs[op.value];
 		else op.value = mem[regs[op.value]];
 	return op;
 }
@@ -198,7 +198,7 @@ void process::exec() {
 		case 0x01: // INT 0x01
 		{
 			if(regs[0] == 1) regs[0] = PLATFORM;
-			else if(regs[0] == 2) regs[0] = 310; // 0.3.10
+			else if(regs[0] == 2) regs[0] = 333; // 0.3.33
 			break;
 		}
 		default:
