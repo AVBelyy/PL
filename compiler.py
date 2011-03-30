@@ -33,7 +33,8 @@ opcodes = (
 	("push",	0x13), #
 	("movf",	0x14),
 	("int",		0x15), #
-	("mod",		0x16)  #
+	("mod",		0x16), #
+	("dynload",	0x17)  #
 )
 
 curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "data": 0}, {"code": [], "data": []}
@@ -43,6 +44,7 @@ varTable, constTable, labelTable, procTable = [], [], [], []
 structTable, structPtr = [], -1
 exportTable, importTable, curLibrary = [], [], ""
 includes, incLevel = [], 0
+ifs, ifsLevel = [True], 0
 constStrCounter = 0
 path, outpath = environ["PATH"].split(pathsep), ""
 
@@ -73,9 +75,14 @@ def getcmd(name):
 
 def getcint(cint):
 	if not cint: return 0
+	cint = cint.lower()
+	for const in constTable:
+		if cint == const[0]:
+			cint = const[1]
+			break
 	if cint[0] == cint[-1] == "'":	return ord(encode(cint[1:-1])[0])
-	if cint[:2].lower() == "0x":	return int(cint, 16) & 0x7fff
-	elif cint[:2].lower() == "0b":	return int(cint, 2) & 0x7fff
+	if cint[:2] == "0x":			return int(cint, 16) & 0x7fff
+	elif cint[:2] == "0b":			return int(cint, 2) & 0x7fff
 	if cint[0] == cint[-1] == "'":	return ord(cint[1:-1]) & 0x7fff
 	else:							return int(cint) & 0x7fff
 
@@ -105,7 +112,7 @@ def getop(op):
 	operand = {"flags": 0, "value": 0}
 	op = op.strip()
 	for x in constTable:
-		if x[0] == op: return getop(x[1])
+		if x[0] == op.lower(): return getop(x[1])
 	try:
 		args = splitln(op[op.index("("):].strip()[1:-1])
 		for x in args:
@@ -160,7 +167,7 @@ def getop(op):
 def sizeof(t):
 	if re.match("string", t):		# is it string?
 		try:
-			size = int(re.search("(?<=string\[).*(?=\])", t).group(0))
+			size = getop(re.search("(?<=string\[).*(?=\])", t).group(0))["value"]
 			if size < 0:
 				raise TypeError, "strings can't be negative or zero-length"
 			else:
@@ -224,8 +231,19 @@ def getcstr(cstr): # parse const string in DATA section
 def parse(ln):
 	global curLibrary, curSection, structPtr
 	global includes, incLevel
+	global ifs, ifsLevel
 	ln = ln.strip()
 	if not ln: return
+	if ln.lower() == "#else":
+		ifs[ifsLevel] = not ifs[ifsLevel]
+		return
+	elif ln.lower() == "#endif":
+		if ifsLevel == 0:
+			raise CompileError, "unexpected '#endif'"
+		ifsLevel -= 1
+		ifs.pop()
+		return
+	if not ifs[ifsLevel]: return
 	if ln[-1] == ":": # label
 		curSection = ln[:-1].strip().lower()
 		if curSection not in reservedSections: # is procedure
@@ -239,7 +257,7 @@ def parse(ln):
 			sectionLength[curSection] = 0		
 	elif ln[:8].lower() == "#include":
 		try:
-			filename = re.split("\\s*", ln)[1]
+			filename = re.split("\\s+", ln)[1]
 		except:
 			raise CompileError, "specify name of including file"
 		if filename[0] + filename[-1] == "<>":
@@ -262,6 +280,20 @@ def parse(ln):
 			includes.pop()
 		else:
 			raise CompileError, "incorrect filename format"
+	elif ln[:7].lower() == "#ifndef":
+		try:
+			define = re.split("\\s+", ln)[1]
+		except:
+			raise CompileError, "expected const name after '#ifndef'"
+		ifsLevel += 1
+		ifs.append(define.lower() not in (c[0] for c in constTable))
+	elif ln[:6].lower() == "#ifdef":
+		try:
+			define = re.split("\\s+", ln)[1]
+		except:
+			raise CompileError, "expected const name after '#ifdef'"
+		ifsLevel += 1
+		ifs.append(define.lower() in (c[0] for c in constTable))
 	else: # command
 		buf = []
 		if curSection == "header":
@@ -282,7 +314,12 @@ def parse(ln):
 				if "library" in cmd:
 					header["library"] = {"static": "static" in cmd, "pid": "static" in cmd and getcint(arg) or 0}
 		elif curSection == "const":
-			constTable.append(re.split("\\s+", ln, 1))
+			const = re.split("\\s+", ln, 1)
+			if const[0].lower() not in [c[0] for c in constTable]:
+				try:
+					constTable.append([const[0].lower(), const[1]])
+				except:
+					constTable.append([const[0].lower(), "1"])
 		elif curSection == "code" or curSection not in reservedSections:
 			tokens = splitln(ln)
 			tokens[0] = tokens[0].lower()
@@ -359,6 +396,11 @@ def parse(ln):
 				buf.append(sectionLength[curSection])
 				buf.append(getcmd(tokens[0]))
 				sectionLength[curSection] += 1
+			if tokens[0] == "dynload":
+				buf.append(sectionLength[curSection])
+				buf.append(getcmd(tokens[0]))
+				print tokens
+				sectionLength[curSection] += 1
 		elif curSection == "data":
 			tokens = re.split("\\s+", ln, 2)
 			if tokens[0].lower() == "ends":
@@ -376,7 +418,7 @@ def parse(ln):
 			varname = tokens[0]
 			variable = {"name": varname, "type": vartype, "start": sectionLength["data"], "size": 0}
 			if re.match("string", vartype):
-				buf, flag = "", 0
+				buf, flag = "", 0	
 				try: # if string has fixed length
 					buf = "\0" * sizeof(vartype)
 				except: flag += 1
@@ -560,4 +602,3 @@ if header["library"]:
 	o.close()
 
 print "%s.asm: successfully compiled (%i bytes, %f s)" % (outpath, getsize(basename(outpath) + ".bin"), time() - start)
-exit(0)

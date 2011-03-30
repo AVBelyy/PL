@@ -53,7 +53,7 @@
 	int fseek(FILE*, long int, int);
 	int feof(FILE*);
 	long int ftell(FILE*);
-	int fputs(const char*, FILE*);
+	int fputs(const char*);
 #endif
 
 class Stdio {

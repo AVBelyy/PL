@@ -1,17 +1,19 @@
+const:
+	NO_HEAP
+
 #include <libstd.inc>
 
+data:
+	buf		string[2]
 import:
 	from "libstd.def"
-		putc, puts, gets
-		atoi, itoa
-data:
-	buffer	string[100]
-	self	process
+		gets, puts, malloc
+	
 code:
-	mov		self.pid	4512
-	mov		r0			self.pid
-	call itoa(buffer self.pid)
-	call puts("NUMBER = ")
-	call puts(buffer)
-	call putc('\n')
-
+	push 0
+	label loop
+	inc r0
+	if (r0==32000) goto end
+	goto loop
+	label end
+	/call gets()

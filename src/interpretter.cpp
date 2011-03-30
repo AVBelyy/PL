@@ -11,7 +11,7 @@ int_handler interrupts[MAX_INTERRUPT];
 uint8_t pcount = 0;
 
 process::process(char *path) {
-	uint8_t len, i, temp, buffer[16];
+	int i, len;
 	owner = this;
 	f = fopen(path, "rb");
 	len = fgetc((FILE*)f)+1;
@@ -43,7 +43,8 @@ process::process(char *path) {
 	plist[pcount++] = this;
 }
 uint16_t process::fgetint() {
-	return (fgetc((FILE*)owner->f) << 8) + fgetc((FILE*)owner->f);
+	FILE *file = (FILE*)owner->f;
+	return (fgetc(file) << 8) + fgetc(file);
 }
 p_operand process::getop(bool ReturnPtr) {
 	p_operand op;
@@ -58,10 +59,19 @@ p_operand process::getop(bool ReturnPtr) {
 	return op;
 }
 void process::exec() {
-	uint8_t cmd = fgetc((FILE*)owner->f);
-	if(feof((FILE*)owner->f)) return;
+	FILE *file = (FILE*)owner->f;
+	uint8_t cmd = fgetc(file);
+	if(feof(file)) return;
 	switch(cmd) {
 	// Basic arithmetic and logic operations
+	#ifdef __DEBUG__
+	case 0x00: // NOP
+	{
+		if(!resultFlag) break;
+		printf("R0 = %d\nR1 = %d\nR2 = %d\nR3 = %d\n\n", regs[0], regs[1], regs[2], regs[3]);
+		break;
+	}
+	#endif
 	case 0x01: // ADD
 	case 0x02: // SUB
 	case 0x05: // MUL
@@ -73,7 +83,7 @@ void process::exec() {
 	case 0x0B: // SHR
 	case 0x16: // MOD
 	{
-		uint32_t index = fgetc((FILE*)owner->f), *reg = &regs[index];
+		uint32_t index = fgetc(file), *reg = &regs[index];
 		p_operand value = getop();
 		if(!resultFlag) break;
 		if(cmd == 0x01)			*reg += value.value;
@@ -92,13 +102,13 @@ void process::exec() {
 	{
 		uint16_t offset = fgetint();
 		if(!resultFlag) break;
-		fseek((FILE*)owner->f, offset + entries[entryLevel].start, SEEK_SET);
+		fseek(file, offset + entries[entryLevel].start, SEEK_SET);
 		break;
 	}
 	case 0x0D: // INC
 	case 0x0E: // DEC
 	{
-		uint16_t index = fgetc((FILE*)owner->f);
+		uint16_t index = fgetc(file);
 		if(!resultFlag) break;
 		if(cmd == 0x0D)		 regs[index]++;
 		else if(cmd == 0x0E) regs[index]--;
@@ -106,7 +116,7 @@ void process::exec() {
 	}
 	case 0x0F: // IF
 	{
-		char cond = fgetc((FILE*)owner->f);
+		char cond = fgetc(file);
 		p_operand lvalue = getop(), rvalue = getop();
 		if(!resultFlag) break;
 		if(cond == 0)		resultFlag = (lvalue.value == rvalue.value);
@@ -137,7 +147,7 @@ void process::exec() {
 			for(uint8_t i = 0; i < lib->header.procs_cnt; i++) {
 				if(lib->header.procs[i].id == (addr & 0xFF)) {
 					// store current process
-					entries[entryLevel].offset = ftell((FILE*)owner->f);
+					entries[entryLevel].offset = ftell(file);
 					entries[entryLevel++].p = owner;
 					// set new process & position
 					owner = lib;
@@ -154,9 +164,9 @@ void process::exec() {
 			for(uint8_t i = 0; i < owner->header.procs_cnt; i++)
 				if(owner->header.procs[i].id == (addr & 0xFF)) {
 					entries[entryLevel].p = owner;
-					entries[entryLevel++].offset = ftell((FILE*)owner->f);
+					entries[entryLevel++].offset = ftell(file);
 					entries[entryLevel].start = entries[entryLevel].offset = owner->header.procs[i].offset;
-					fseek((FILE*)owner->f, entries[entryLevel].offset, SEEK_SET);
+					fseek(file, entries[entryLevel].offset, SEEK_SET);
 					break;
 				}
 		}
@@ -165,8 +175,9 @@ void process::exec() {
 	case 0x12: // RET
 	{
 		if(!resultFlag) break;
+		stackPointer = 0;
 		owner = entries[--entryLevel].p;
-		fseek((FILE*)owner->f, entries[entryLevel].offset, SEEK_SET);
+		fseek(file, entries[entryLevel].offset, SEEK_SET);
 		// unlock current process
 		lockFlag = false;
 		break;
@@ -175,7 +186,8 @@ void process::exec() {
 	{
 		p_operand op = getop();
 		if(!resultFlag) break;
-		regs[stackPointer++] = op.value;
+		if(stackPointer < 9)
+			regs[stackPointer++] = op.value;
 		break;
 	}
 	case 0x14: // MOVF
@@ -183,11 +195,11 @@ void process::exec() {
 		// NOT IMPLEMENTED YET!
 		// ARG1 IS A DESTIONATION
 		// ARG2 IS A SOURCE IN _LOCAL_ PROGRAM MEMORY (IN LIBRARIES)
-		p_operand addr = getop(true), value = getop();
-		if(!resultFlag) break;
-		if(addr.type == OP_REG) regs[addr.value] = value.value;
-		else mem[addr.value] = value.value;
-		break;
+		// p_operand addr = getop(true), value = getop();
+		// if(!resultFlag) break;
+		// if(addr.type == OP_REG) regs[addr.value] = value.value;
+		// else mem[addr.value] = value.value;
+		// break;
 	}
 	case 0x15: // INT
 	{
@@ -197,8 +209,7 @@ void process::exec() {
 		switch(num.value) {
 		case 0x01: // INT 0x01
 		{
-			if(regs[0] == 1) regs[0] = PLATFORM;
-			else if(regs[0] == 2) regs[0] = 333; // 0.3.33
+			regs[0] = PLATFORM;	
 			break;
 		}
 		default:
@@ -224,7 +235,6 @@ process* process::search(uint16_t pid) {
 	return NULL;
 }
 uint8_t process::attachInterrupt(uint8_t id, void (*handler)(process*)) {
-	if(!id || handler == NULL) return -1;
 	for(uint16_t i = 0; i < MAX_INTERRUPT; i++) if(!interrupts[i].id) {
 		interrupts[i].id = id;
 		interrupts[i].handler = handler;

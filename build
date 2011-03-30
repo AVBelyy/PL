@@ -1,7 +1,7 @@
 #!/bin/sh
 
 cc=g++
-cflags=
+cflags= #"-D__DEBUG__"
 ldflags=
 
 hal=
@@ -17,10 +17,10 @@ fi
 if [ "$target" = "avr" ]; then
 	platform=1
 	cc=avr-g++
-	cflags="-mmcu=at90usb1286 "
+	cflags+="-mmcu=at90usb1286 "
 	halname=at90usb1286
-	hal="avr-gcc -c -Ihal/$halname -D__AVR_AT90USB1286__ -DF_CPU=16000000 -DUSB_SERIAL hal/$halname/usb.c hal/$halname/pins_teensy.c -Os -w -mmcu=at90usb1286"
-	inc="-D__AVR_AT90USB1286__ -DF_CPU=16000000 -DUSB_SERIAL -include hal/at90usb1286/hal.h "
+	hal="avr-gcc -c -Ihal/$halname -D__AVR_AT90USB1286__ -DF_CPU=16000000 -DUSB_SERIAL hal/$halname/usb.c hal/$halname/pins_teensy.c -Os -w $cflags"
+	inc+="-D__AVR_AT90USB1286__ -DF_CPU=16000000 -DUSB_SERIAL -include hal/at90usb1286/hal.h "
 elif [ "$target" = "win32" ]; then
 	platform=2
 elif [ "$target" = "unix" ]; then

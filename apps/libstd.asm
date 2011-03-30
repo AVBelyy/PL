@@ -1,3 +1,8 @@
+const:
+	NO_HEAP
+
+#include <libstd.inc>
+
 header:
 	name = std
 	static library = 0
@@ -87,8 +92,56 @@ gets:
 	if (r0 == 3) ret
 	call putc( '\n' )
 	ret
+malloc:
+	#	R0		- size in bytes
+	#	(int)R1	- loop counter
+	#	(int)R2	- max block size	
+	if (r0>=256) goto fail
+	xor r1 r1
+	xor r2 r2
+	label loop
+	if (&r1==0) goto then
+	xor r2 r2
+	add r1 &r1
+	goto endif
+	label then
+	inc r2
+	label endif
+	inc r1
+	if (r0!=r2) goto continue
+	sub r1 r2
+	mov &r1 r0
+	inc r1
+	push r1
+	ret
+	label continue
+	if (r1!=HEAP_SIZE) goto loop
+	label fail
+	push NULL
+	ret
+free:
+	#	R0		- ptr
+	#	(int)R1	- loop counter
+	if(r0==NULL) ret
+	dec r0
+	mov r1 &r0
+	if (r1==0) ret
+	label loop
+	inc r0
+	dec r1
+	mov &r0 0
+	if (r1) goto loop
+	ret
+realloc:
+	#	R0		- ptr
+	#	R1		- new size
+	mov r2 r1
+	call free()
+	call malloc(r2)
+	ret
 export:
 	putc, puts
 	getc, gets
 	itoa, atoi
 	strcpy, strlen
+	malloc, realloc, free
