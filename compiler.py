@@ -34,7 +34,7 @@ opcodes = (
 	("movf",	0x14),
 	("int",		0x15), #
 	("mod",		0x16), #
-	("dynload",	0x17)  #
+	("pid",		0x17)  #
 )
 
 curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "data": 0}, {"code": [], "data": []}
@@ -223,7 +223,8 @@ def getcstr(cstr): # parse const string in DATA section
 		fx = parsefx(cstr.lower())
 		try:	symbol = getcint(fx["args"][1])
 		except:	symbol = 0
-		if fx == 0: return "\0"
+		if fx == 0 or fx["name"] not in ("fill"):
+			raise CompileError, "const string '%s' have incorrect format" % cstr
 		if fx["name"] == "fill":
 			out = chr(symbol) * getcint(fx["args"][0])
 	return out
@@ -396,11 +397,17 @@ def parse(ln):
 				buf.append(sectionLength[curSection])
 				buf.append(getcmd(tokens[0]))
 				sectionLength[curSection] += 1
-			if tokens[0] == "dynload":
+			if tokens[0] == "pid":
 				buf.append(sectionLength[curSection])
 				buf.append(getcmd(tokens[0]))
-				print tokens
-				sectionLength[curSection] += 1
+				operand = getop(tokens[1])
+				checkop(operand, [4])
+				buf.append(operand["value"])
+				operand = getop(tokens[2])
+				checkop(operand, [0])
+				buf.append(operand["value"] >> 8)
+				buf.append(operand["value"] & 0xff)
+				sectionLength[curSection] += 4
 		elif curSection == "data":
 			tokens = re.split("\\s+", ln, 2)
 			if tokens[0].lower() == "ends":
@@ -503,6 +510,7 @@ def parse(ln):
 				if len(var) == 2: info["name"] = var[1].strip()
 				if not info:
 					raise NameError, "undefined variable '%s'" % var[0].strip()
+				print info
 				exportTable.append(info)
 		if not buf: return
 		sections[curSection].append(buf)
@@ -585,7 +593,7 @@ for x in sections["code"]:
 o.close()
 
 #generate .INC file
-if header["library"]:
+if header["library"] and header["library"]["static"]:
 	o = open(basename(outpath) + ".def", "wb")
 	lib_byte = header["library"]["static"] * 0x80 | len(header["name"])
 	o.write(chr(lib_byte) + header["name"])
@@ -601,4 +609,4 @@ if header["library"]:
 		o.write(chr(len(x["name"])) + x["name"])
 	o.close()
 
-print "%s.asm: successfully compiled (%i bytes, %f s)" % (outpath, getsize(basename(outpath) + ".bin"), time() - start)
+print "%s.asm: successfully compiled (%i bytes, %f is)" % (outpath, getsize(basename(outpath) + ".bin"), time() - start)

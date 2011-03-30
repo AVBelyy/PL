@@ -3,6 +3,8 @@ const:
 
 #include <libstd.inc>
 
+header:
+	name = test
 data:
 	buf		string[2]
 import:
@@ -10,6 +12,8 @@ import:
 		gets, puts, malloc
 	
 code:
+	pid r0 "test"
+	nop
 	push 0
 	label loop
 	inc r0

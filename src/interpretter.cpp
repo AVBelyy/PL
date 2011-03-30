@@ -20,7 +20,8 @@ process::process(char *path) {
 	header.procs_cnt = fgetc((FILE*)f);
 	header.lib_byte = fgetc((FILE*)f);
 	header.procs = (p_procs*)malloc(header.procs_cnt*4);
-	for(i = 0; i < header.procs_cnt; i++) {
+	for(i = 0; i < header.procs_cnt; i++)
+	{
 		header.procs[i].id = fgetint();
 		header.procs[i].offset = fgetint();		
 	}
@@ -38,7 +39,27 @@ process::process(char *path) {
 	entries[0].offset = entries[0].start = entryPoint;
 	fseek((FILE*)f, entries[0].offset, SEEK_SET);
 	// set pid
-	if(header.lib_byte & 0xC0) pid = header.lib_byte & 0x3F;
+	if(header.lib_byte & 0x80)
+	// if library
+	{
+		if(header.lib_byte & 0x40)
+			pid = header.lib_byte & 0x3F;
+		else
+			for(uint8_t i = 64; i < 128; i++)
+				if(!process::search(i))
+				{
+					pid = i;
+					break;
+				}
+	}
+	else
+	// if application
+		for(uint8_t i = 128; i <= 255; i++)
+			if(!process::search(i))
+			{
+				pid = i;
+				break;
+			}
 	// insert process in process list
 	plist[pcount++] = this;
 }
@@ -193,7 +214,7 @@ void process::exec() {
 	case 0x14: // MOVF
 	{
 		// NOT IMPLEMENTED YET!
-		// ARG1 IS A DESTIONATION
+	// ARG1 IS A DESTIONATION
 		// ARG2 IS A SOURCE IN _LOCAL_ PROGRAM MEMORY (IN LIBRARIES)
 		// p_operand addr = getop(true), value = getop();
 		// if(!resultFlag) break;
@@ -221,12 +242,24 @@ void process::exec() {
 		}
 		break;
 	}
+	case 0x17: // PID
+	{
+		uint16_t index = fgetc(file);
+		char *name = (char*)(mem + fgetint());
+		if(!resultFlag) break;
+		for(uint8_t i = 0; i < pcount; i++)
+			if(!strcmp(plist[i]->name, name))
+			{
+				regs[index] = plist[i]->pid;
+				break;
+			}
+	}
 	}
 	resultFlag = true;
 }
 void process::share() {
-	// if process isn't static library
-	if(!(header.lib_byte & 0xC0)) return;
+	// if process isn't library
+	if(!(header.lib_byte & 0x80)) return;
 	// run init code (if it's present)
 	if(entries[0].offset) while(!feof((FILE*)f)) exec();
 }

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 cc=g++
-cflags= #"-D__DEBUG__"
+cflags="-D__DEBUG__"
 ldflags=
 
 hal=
