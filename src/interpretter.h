@@ -28,6 +28,7 @@ const uint8_t OP_PROCPTR = 5;
 
 //structures
 struct p_procs {
+	char *name;
 	uint16_t id;
 	uint16_t offset;
 };

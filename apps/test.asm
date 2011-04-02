@@ -12,7 +12,8 @@ import:
 		gets, puts, malloc
 	
 code:
-	pid r0 "test"
+	pid r3 "dyn"
+	call r3::foo(1 2 3)
 	nop
 	push 0
 	label loop

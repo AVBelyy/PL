@@ -10,7 +10,8 @@ process *plist[MAX_PROCESS];
 int_handler interrupts[MAX_INTERRUPT];
 uint8_t pcount = 0;
 
-process::process(char *path) {
+process::process(char *path)
+{
 	int i, len;
 	owner = this;
 	f = fopen(path, "rb");
@@ -22,8 +23,19 @@ process::process(char *path) {
 	header.procs = (p_procs*)malloc(header.procs_cnt*4);
 	for(i = 0; i < header.procs_cnt; i++)
 	{
-		header.procs[i].id = fgetint();
-		header.procs[i].offset = fgetint();		
+		if(header.lib_byte >> 6 == 0b10) // if dynamic library
+		{
+			// read proc name, id and offset
+			len = fgetc((FILE*)f)+1;
+			header.procs[i].name = (char*)malloc(len);
+			fgets(header.procs[i].name, len, (FILE*)f); 
+ 			header.procs[i].id = fgetc((FILE*)f);
+			header.procs[i].offset = fgetint();
+		} else { // if application or static library
+			// read proc id and offset
+			header.procs[i].id = fgetint();
+			header.procs[i].offset = fgetint();
+		}
 	}
 	uint16_t entryPoint = fgetint();
 	header.data_size = fgetint();
@@ -37,6 +49,7 @@ process::process(char *path) {
 	for(i = 0; i < header.data_size; i++) mem[i] = fgetc((FILE*)f);
 	entries[entryLevel = 0].p = this;
 	entries[0].offset = entries[0].start = entryPoint;
+	// jump to program entry point
 	fseek((FILE*)f, entries[0].offset, SEEK_SET);
 	// set pid
 	if(header.lib_byte & 0x80)
@@ -84,7 +97,6 @@ void process::exec() {
 	uint8_t cmd = fgetc(file);
 	if(feof(file)) return;
 	switch(cmd) {
-	// Basic arithmetic and logic operations
 	#ifdef __DEBUG__
 	case 0x00: // NOP
 	{
@@ -93,6 +105,7 @@ void process::exec() {
 		break;
 	}
 	#endif
+	// Basic arithmetic and logic operations
 	case 0x01: // ADD
 	case 0x02: // SUB
 	case 0x05: // MUL
@@ -162,7 +175,7 @@ void process::exec() {
 		uint16_t addr = fgetint();
 		if(!resultFlag) break;
 		stackPointer = 0;
-		if(addr & 0xC000) { // if procedure in static library
+		if(addr & 0xC000) { // if procedure static in library
 			process *lib = process::search(addr & 0x3F00);
 			if(lib == NULL) break;
 			for(uint8_t i = 0; i < lib->header.procs_cnt; i++) {
@@ -183,7 +196,8 @@ void process::exec() {
 		} else { // if procedure is local
 			// search proc in proctable
 			for(uint8_t i = 0; i < owner->header.procs_cnt; i++)
-				if(owner->header.procs[i].id == (addr & 0xFF)) {
+				if(owner->header.procs[i].id == (addr & 0xFF))
+				{
 					entries[entryLevel].p = owner;
 					entries[entryLevel++].offset = ftell(file);
 					entries[entryLevel].start = entries[entryLevel].offset = owner->header.procs[i].offset;
@@ -191,6 +205,30 @@ void process::exec() {
 					break;
 				}
 		}
+		break;
+	}
+	case 0x18: // CALLD
+	{
+		p_operand lib_pid = getop();
+		char *proc = (char*)(mem + fgetint());
+		if(!resultFlag) break;
+		process *lib = process::search(lib_pid.value);
+		if(lib == NULL || (lib->header.lib_byte >> 6 != 0b10)) break;
+		for(uint8_t i = 0; i < lib->header.procs_cnt; i++)
+			if(!strcmp(lib->header.procs[i].name, proc))
+			{
+				// store current process
+				entries[entryLevel].offset = ftell(file);
+				entries[entryLevel++].p = owner;
+				// set new process & position
+				owner = lib;
+				entries[entryLevel].p = lib;
+				entries[entryLevel].start = entries[entryLevel].offset = lib->header.procs[i].offset;
+				fseek((FILE*)owner->f, entries[entryLevel].offset, SEEK_SET);
+				// lock current process
+				lockFlag = true;
+				break;
+			}
 		break;
 	}
 	case 0x12: // RET

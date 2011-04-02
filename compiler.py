@@ -34,7 +34,8 @@ opcodes = (
 	("movf",	0x14),
 	("int",		0x15), #
 	("mod",		0x16), #
-	("pid",		0x17)  #
+	("pid",		0x17), #
+	("calld",	0x18), #
 )
 
 curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "data": 0}, {"code": [], "data": []}
@@ -58,7 +59,7 @@ def search_file(filename, paths):
 	for path in paths:
 		if exists(join(path, filename)):
 			return abspath(join(path, filename))
-	raise IOError, "file not found"
+	raise IOError, "file '%s' not found" % filename
 
 def splitln(ln):
 	ln = re.sub('"[^"]*"', lambda x: x.group(0).replace(" ", "%%_SPACE_%%").replace("\t", "%%_TAB_%%"), ln)
@@ -250,7 +251,7 @@ def parse(ln):
 		if curSection not in reservedSections: # is procedure
 			if curSection in [proc["name"] for proc in procTable]: # already defined
 				raise NameError, "duplicate definition of procedure '%s'" % curSection
-			procTable.append({"global": False, "name": curSection, "id": len(procTable)})
+			procTable.append({"global": False, "name": curSection, "id": len(procTable), "reserved": 0})
 		try:
 			if sections[curSection]: pass
 		except:
@@ -331,7 +332,7 @@ def parse(ln):
 				buf.append(getcmd(tokens[0]))
 				buf.append(operand["value"])
 				sectionLength[curSection] += 2
-			if tokens[0] in ("add", "sub", "mul", "div", "xor", "or", "and", "shl", "shr", "mod"): #1 - register, #2 - any data
+			if tokens[0] in ("add", "sub", "mul", "div", "xor", "or", "and", "shl", "shr", "mod"): #1 - register, 2 - any data
  				buf.append(sectionLength[curSection]) # information for bin writer - command offset
 				buf.append(getcmd(tokens[0]))
 				operand = getop(tokens[1])
@@ -343,7 +344,7 @@ def parse(ln):
 				buf.append(operand["value"] >> 8)
 				buf.append(operand["value"] & 0xff)	
 				sectionLength[curSection] += 5
-			if tokens[0] in ("mov", "movf"): #1 and #2 - any data
+			if tokens[0] in ("mov", "movf"): #1 and 2 - any data
 				buf.append(sectionLength[curSection]) # information for bin writer - command offset
 				buf.append(getcmd(tokens[0]))
 				for x in (1, 2):
@@ -362,14 +363,31 @@ def parse(ln):
 				buf.append(operand["value"] >> 8)
 				buf.append(operand["value"] & 0xff)
 				sectionLength[curSection] += 4
-			if tokens[0] == "call": #1 - procedure ptr
-				operand = getop(ln[4:])
-				checkop(operand, [4, 5])
-				buf.append(sectionLength[curSection]) # information for bin writer - command offset
-				buf.append(getcmd(tokens[0]))
-				buf.append(operand["id"] >> 8)
-				buf.append(operand["id"] & 0xff)
-				sectionLength[curSection] += 3				
+			if tokens[0] == "call": # (1 - procedure ptr) OR (1 and 2 - any data)
+				try:
+					lib, proc = ln[:ln.index("(", 4)][4:].strip().split("::")
+					lib_op, proc_op = getop(lib), getop('"%s"' % proc)
+					checkop(lib_op, xrange(5))
+					args = splitln(ln[ln.index("("):].strip()[1:-1])
+					for x in args:
+						if x.strip(): parse("PUSH " + x)
+					buf.append(sectionLength[curSection]) # information for bin writer - command offset
+					print getcmd("calld")
+					buf.append(getcmd("calld"))
+					buf.append(lib_op["flags"])
+					buf.append(lib_op["value"] >> 8)
+					buf.append(lib_op["value"] & 0xff)
+					buf.append(proc_op["value"] >> 8)
+					buf.append(proc_op["value"] & 0xff)
+					sectionLength[curSection] += 6
+				except:
+					operand = getop(ln[4:])
+					checkop(operand, [4, 5])
+					buf.append(sectionLength[curSection]) # information for bin writer - command offset
+					buf.append(getcmd(tokens[0]))
+					buf.append(operand["id"] >> 8)
+					buf.append(operand["id"] & 0xff)
+					sectionLength[curSection] += 3				
 			if tokens[0] == "label":
 				labelTable.append({"name": tokens[1], "section": curSection, "offset": sectionLength[curSection]})
 			if tokens[0] == "if":
@@ -475,12 +493,11 @@ def parse(ln):
 					lib_byte = ord(o.read(1))
 					name = o.read(lib_byte & 0x1f)
 					curLibrary = name
-					for x in xrange(ord(o.read(1))):
-						vartype = ord(o.read(1))
+					for x in xrange(ord(o.read(1))):	
 						varid = o.read(2)
 						varid = (ord(varid[0]) << 8) + ord(varid[1])
 						varname = o.read(ord(o.read(1)))
-						importTable.append({"library": name, "type": vartype, "id": varid, "name": varname})
+						importTable.append({"library": name, "id": varid, "name": varname})
 				else:
 					# search variable in import table
 					libname, varname = curLibrary, cmd[0]
@@ -492,12 +509,7 @@ def parse(ln):
 								concat = concat.split("as")
 								if concat[1]: varname = concat[1].strip()
 							except: pass
-							if x["type"] == 0:   # int
-								varTable.append({"global": True, "type": "int", "name": varname, "start": x["id"]})
-							elif x["type"] == 1: # string
-								varTable.append({"global": True, "type": "string", "name": varname, "start": x["id"]})
-							elif x["type"] == 2: # procedure
-								procTable.append({"global": True, "name": varname, "id": x["id"]})
+							procTable.append({"global": True, "name": varname, "id": x["id"]})
 		elif curSection == "export":
 			if not header["library"]:
 				raise CompileError, "application can't have 'export' section"
@@ -510,7 +522,6 @@ def parse(ln):
 				if len(var) == 2: info["name"] = var[1].strip()
 				if not info:
 					raise NameError, "undefined variable '%s'" % var[0].strip()
-				print info
 				exportTable.append(info)
 		if not buf: return
 		sections[curSection].append(buf)
@@ -531,6 +542,8 @@ while ln:
 	parse(ln)
 f.close()
 
+print sections["code"]
+
 #write data to file
 o = open(basename(outpath) + ".bin", "wb")
 #first of all, write header
@@ -547,7 +560,12 @@ dataSize = 0
 for x in sections["data"]: dataSize += len(x)
 # calculate entry point
 localProcTable = [x for x in procTable if not x["global"]]
-entryPoint = len(header["name"]) + len(localProcTable) * 4 + dataSize + 7
+if header["library"] and not header["library"]["static"]:
+	# if dynamic library
+	entryPoint = len(header["name"]) + len(reduce(lambda x, y: x + y, (x["name"] for x in localProcTable))) + len(localProcTable) * 4 + dataSize + 7
+else:
+	# if static library or application
+	entryPoint = len(header["name"]) + len(localProcTable) * 4 + dataSize + 7
 # write function table
 o.write(chr(len(localProcTable)))
 if header["library"]:
@@ -556,12 +574,18 @@ if header["library"]:
 	o.write(chr(lib_byte))
 else: o.write("\0")
 for x in localProcTable:
-	# id
-	o.write(chr(x["id"] >> 8) + chr(x["id"] & 0xff))
+	if header["library"] and not header["library"]["static"]:
+		# if dynamic library
+		# write proc name
+		o.write(chr(len(x["name"])) + x["name"])
+	else:
+		# if static library or application
+		# write high byte of id
+		o.write(chr(x["id"] >> 8))
+	o.write(chr(x["id"] & 0xff))
 	# offset
 	o.write(chr(entryPoint >> 8) + chr(entryPoint & 0xff))
 	entryPoint += sectionLength[x["name"]]
-
 if not len(sections["code"]): entryPoint = 0
 o.write(chr(entryPoint >> 8) + chr(entryPoint & 0xff))
 o.write(chr(dataSize >> 8) + chr(dataSize & 0xff))
@@ -599,10 +623,6 @@ if header["library"] and header["library"]["static"]:
 	o.write(chr(lib_byte) + header["name"])
 	o.write(chr(len(exportTable)))
 	for x in exportTable:
-		# type
-		if x["type"] == "int": 			o.write("\0")
-		elif x["type"] == "string":		o.write("\1")
-		elif x["type"] == "procedure":	o.write("\2")
 		# start
 		o.write(chr(x["start"] >> 8) + chr(x["start"] & 0xff))
 		# name
