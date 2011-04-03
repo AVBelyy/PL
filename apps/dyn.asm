@@ -7,7 +7,6 @@ header:
 	name = dyn
 	dynamic library
 foo:
-	add r0 1234
 	ret
 export:
 	foo

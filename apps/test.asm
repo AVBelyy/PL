@@ -5,20 +5,10 @@ const:
 
 header:
 	name = test
-data:
-	buf		string[2]
-import:
-	from "libstd.def"
-		gets, puts, malloc
-	
 code:
-	pid r3 "dyn"
-	call r3::foo(1 2 3)
-	nop
+	pid r5 "dyn"
 	push 0
 	label loop
+	call r5::foo()
 	inc r0
-	if (r0==32000) goto end
-	goto loop
-	label end
-	/call gets()
+	if (r0 != 30000) goto loop

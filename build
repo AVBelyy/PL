@@ -106,8 +106,9 @@ if [ -d apps ]; then
 			echo OK
 		else
 			echo ERROR
+			exit 1
 		fi
 	done
 fi
 
-rm *.def
+if [ -f *.def ]; then rm *.def; fi

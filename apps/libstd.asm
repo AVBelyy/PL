@@ -5,7 +5,7 @@ const:
 
 header:
 	name = std
-	static library = 0
+	dynamic library
 strcpy:
 	label loop
 		mov &r0 &r1

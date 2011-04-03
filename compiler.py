@@ -53,7 +53,7 @@ class CompileError(Exception):
 	def __init__(self, value):
 		self.value = value
 	def __str__(self):
-		return repr(self.value)
+		return self.value
 
 def search_file(filename, paths):
 	for path in paths:
@@ -75,7 +75,7 @@ def getcmd(name):
 		if x[0] == name: return x[1]
 
 def getcint(cint):
-	if not cint: return 0
+	if not cint: return None
 	cint = cint.lower()
 	for const in constTable:
 		if cint == const[0]:
@@ -131,6 +131,9 @@ def getop(op):
 		if op[0] == op[-1] == '"':
 			global constStrCounter
 			op = getcstr(op)
+			for var in varTable:
+				if var["name"][:9] == "const_str" and op in sections["data"]:
+					print "ERINNERUNG"
 			varTable.append({"name": "const_str" + str(constStrCounter), "type": "string", "start": sectionLength["data"], "size": len(op)})
 			sectionLength["data"] += len(op)
 			sections["data"].append(op)
@@ -251,7 +254,7 @@ def parse(ln):
 		if curSection not in reservedSections: # is procedure
 			if curSection in [proc["name"] for proc in procTable]: # already defined
 				raise NameError, "duplicate definition of procedure '%s'" % curSection
-			procTable.append({"global": False, "name": curSection, "id": len(procTable), "reserved": 0})
+			procTable.append({"global": False, "name": curSection, "id": len(procTable)})
 		try:
 			if sections[curSection]: pass
 		except:
@@ -314,6 +317,8 @@ def parse(ln):
 				if "name" in cmd:
 					header["name"] = arg
 				if "library" in cmd:
+					if "static" in cmd and getcint(arg) == None:
+						raise CompileError, "static library must have PID"
 					header["library"] = {"static": "static" in cmd, "pid": "static" in cmd and getcint(arg) or 0}
 		elif curSection == "const":
 			const = re.split("\\s+", ln, 1)
@@ -372,7 +377,6 @@ def parse(ln):
 					for x in args:
 						if x.strip(): parse("PUSH " + x)
 					buf.append(sectionLength[curSection]) # information for bin writer - command offset
-					print getcmd("calld")
 					buf.append(getcmd("calld"))
 					buf.append(lib_op["flags"])
 					buf.append(lib_op["value"] >> 8)
@@ -542,8 +546,6 @@ while ln:
 	parse(ln)
 f.close()
 
-print sections["code"]
-
 #write data to file
 o = open(basename(outpath) + ".bin", "wb")
 #first of all, write header
@@ -560,9 +562,10 @@ dataSize = 0
 for x in sections["data"]: dataSize += len(x)
 # calculate entry point
 localProcTable = [x for x in procTable if not x["global"]]
+exportProcs = [x["name"] for x in exportTable]
 if header["library"] and not header["library"]["static"]:
 	# if dynamic library
-	entryPoint = len(header["name"]) + len(reduce(lambda x, y: x + y, (x["name"] for x in localProcTable))) + len(localProcTable) * 4 + dataSize + 7
+	entryPoint = len(header["name"]) + len("" if not exportProcs else reduce(lambda x, y: x + y, (x["name"] for x in localProcTable if x["name"] in exportProcs))) + len(localProcTable) * 4 + dataSize + 7
 else:
 	# if static library or application
 	entryPoint = len(header["name"]) + len(localProcTable) * 4 + dataSize + 7
@@ -576,8 +579,11 @@ else: o.write("\0")
 for x in localProcTable:
 	if header["library"] and not header["library"]["static"]:
 		# if dynamic library
-		# write proc name
-		o.write(chr(len(x["name"])) + x["name"])
+		# if proc in 'export' section, write proc name
+		if x["name"] in exportProcs:
+			o.write(chr(len(x["name"])) + x["name"])
+		else:
+			o.write("\0")
 	else:
 		# if static library or application
 		# write high byte of id
