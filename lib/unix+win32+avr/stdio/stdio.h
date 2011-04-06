@@ -20,7 +20,7 @@
 //
 
 #if (PLATFORM == PLATFORM_UNIX)
-	#define EOF_SYMBOL		0x0A
+	#define EOL_SYMBOL		0x0A
 	// In Linux: simulating getch() function from conio.h
 
 	#include <stdio.h>
@@ -29,14 +29,14 @@
 
 	char getch();
 #elif (PLATFORM == PLATFORM_WIN32)
-	#define EOF_SYMBOL		0x0D
+	#define EOL_SYMBOL		0x0D
 
 	// In Windows: include conio.h with getch() function
 	
 	#include <stdio.h>
 	#include <conio.h>
 #elif (PLATFORM == PLATFORM_AVR)
-	#define EOF_SYMBOL		0x0A
+	#define EOL_SYMBOL		0x0A
 	#undef ENABLE_KEYBOARD_SUPPORT
 
 	// simulating File IO in AVR
@@ -55,6 +55,9 @@
 	long int ftell(FILE*);
 	int fputs(const char*);
 #endif
+
+void clrscr();
+void gotoxy(int, int);
 
 class Stdio {
 	public:

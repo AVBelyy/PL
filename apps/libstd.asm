@@ -5,7 +5,7 @@ const:
 
 header:
 	name = std
-	dynamic library
+	static library = 0
 strcpy:
 	label loop
 		mov &r0 &r1
@@ -20,6 +20,16 @@ strlen:
 		inc r0
 		inc r1
 	goto loop
+clrscr:
+	push 1
+	int 0x05
+	ret
+gotoxy:
+	shl r0 8
+	add r1 r0
+	push 2
+	int 0x05
+	ret
 putc:
 	mov r1 r0
 	push 3
@@ -70,6 +80,11 @@ atoi:
 getc:
 	push 5
 	push 2
+	int 0x05
+	ret
+getcne:
+	push 5
+	push 3
 	int 0x05
 	ret
 gets:
@@ -140,8 +155,9 @@ realloc:
 	call malloc(r2)
 	ret
 export:
+	clrscr, gotoxy
 	putc, puts
-	getc, gets
+	getc, getcne, gets
 	itoa, atoi
 	strcpy, strlen
 	malloc, realloc, free

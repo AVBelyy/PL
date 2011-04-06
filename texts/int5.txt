@@ -1,0 +1,11 @@
+== INT 5 subroutines list ==
+
+1: Clear Screen
+2: Goto X & Y (X - R0 HIWORD, Y - R0 LOWORD)
+3: Put Char
+4: Put String
+5:
+	1: Check keyboard support
+	2: Get char with echo
+	3: Get char w/o echo
+	4: Get EoL symbol

@@ -1,4 +1,4 @@
-const
+const:
 	NULL		0
 	HEAP_SIZE	8192
 data:

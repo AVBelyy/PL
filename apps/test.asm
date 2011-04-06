@@ -5,10 +5,11 @@ const:
 
 header:
 	name = test
+import:
+	from "libstd.def"
+		clrscr, gotoxy, puts, gets, getc, getcne
 code:
-	pid r5 "dyn"
-	push 0
-	label loop
-	call r5::foo()
-	inc r0
-	if (r0 != 30000) goto loop
+	call clrscr()
+	call gotoxy(5 5)
+	call puts("Hello from this awful language :D \n")
+	call getcne()

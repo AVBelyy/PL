@@ -20,7 +20,7 @@ process::process(char *path)
 	fgets(name, len, (FILE*)f);
 	header.procs_cnt = fgetc((FILE*)f);
 	header.lib_byte = fgetc((FILE*)f);
-	header.procs = (p_procs*)malloc(header.procs_cnt*4);
+	header.procs = (p_procs*)malloc(header.procs_cnt*sizeof(p_procs));
 	for(i = 0; i < header.procs_cnt; i++)
 	{
 		if(header.lib_byte >> 6 == 0b10) // if dynamic library
@@ -127,8 +127,8 @@ void process::exec() {
 		else if(cmd == 0x07)	*reg ^= value.value;
 		else if(cmd == 0x08)	*reg |= value.value;
 		else if(cmd == 0x09)	*reg &= value.value;
-		else if(cmd == 0x0A)	*reg << value.value;
-		else if(cmd == 0x0B)	*reg >> value.value;
+		else if(cmd == 0x0A)	*reg <<= value.value;
+		else if(cmd == 0x0B)	*reg >>= value.value;
 		else if(cmd == 0x16)	*reg %= value.value;
 		break;
 	}
@@ -175,11 +175,14 @@ void process::exec() {
 		uint16_t addr = fgetint();
 		if(!resultFlag) break;
 		stackPointer = 0;
-		if(addr & 0xC000) { // if procedure static in library
-			process *lib = process::search(addr & 0x3F00);
+		if(addr & 0xC000)
+		{
+			// if procedure static in library
+			process *lib = process::search((addr & 0x3F00) >> 8);
 			if(lib == NULL) break;
-			for(uint8_t i = 0; i < lib->header.procs_cnt; i++) {
-				if(lib->header.procs[i].id == (addr & 0xFF)) {
+			for(uint8_t i = 0; i < lib->header.procs_cnt; i++)
+				if(lib->header.procs[i].id == (addr & 0xFF))
+				{
 					// store current process
 					entries[entryLevel].offset = ftell(file);
 					entries[entryLevel++].p = owner;
@@ -192,7 +195,6 @@ void process::exec() {
 					lockFlag = true;
 					break;
 				}
-			}
 		} else { // if procedure is local
 			// search proc in proctable
 			for(uint8_t i = 0; i < owner->header.procs_cnt; i++)
