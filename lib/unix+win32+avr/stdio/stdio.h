@@ -32,7 +32,8 @@
 	#define EOL_SYMBOL		0x0D
 
 	// In Windows: include conio.h with getch() function
-	
+
+	#include <windows.h>
 	#include <stdio.h>
 	#include <conio.h>
 #elif (PLATFORM == PLATFORM_AVR)
