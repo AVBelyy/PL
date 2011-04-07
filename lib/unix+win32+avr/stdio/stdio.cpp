@@ -29,7 +29,10 @@
 	}
 	void gotoxy(int x, int y)
 	{
-		printf("%c[%d;%df", 0x1B, y, x);
+		COORD coord;
+		coord.X = x;
+		coord.Y = y;
+		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
 	}
 #elif (PLATFORM == PLATFORM_AVR)
 	// FOR DEBUG ONLY!!!
