@@ -24,18 +24,20 @@ code:
 	dec r7
 	if (r7) goto vline
 	mov r7 r5
-	call gotoxy(1 r5)
+	call gotoxy(1 r6)
 	label vline2
 	call putc('-')
 	dec r7
 	if (r7) goto vline2
 	mov r7 r6
+	dec r7
 	label hline
 	call gotoxy(1 r7)
 	call putc('|')
 	dec r7
 	if (r7) goto hline
 	mov r7 r6
+	dec r7
 	label hline2
 	call gotoxy(r5 r7)
 	call putc('|')

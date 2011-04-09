@@ -23,7 +23,7 @@
 	#define EOL_SYMBOL		0x0A
 	// In Linux: simulating getch() function from conio.h
 
-	#include <sys/ioctl.h>
+        #include <sys/ioctl.h>
 	#include <stdio.h>
 	#include <termios.h>
 	#include <unistd.h>
@@ -35,7 +35,6 @@
 	// In Windows: include conio.h with getch() function
 
 	#include <windows.h>
-	#include <sys/ioctl.h>
 	#include <stdio.h>
 	#include <conio.h>
 #elif (PLATFORM == PLATFORM_AVR)

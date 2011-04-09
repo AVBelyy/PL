@@ -29,22 +29,30 @@
 		return (w.ws_col << 8) + (w.ws_row & 0xFF);
 	}
 #elif (PLATFORM == PLATFORM_WIN32)
-	inline void clrscr()
+	void clrscr()
 	{
-		system("cls");
+		HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		COORD coord = {0, 0};
+		DWORD count;
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		if(GetConsoleScreenBufferInfo(hStdOut, &csbi))
+		{
+			FillConsoleOutputCharacter(hStdOut, (TCHAR) 32, csbi.dwSize.X * csbi.dwSize.Y, coord, &count);
+			FillConsoleOutputAttribute(hStdOut, csbi.wAttributes, csbi.dwSize.X * csbi.dwSize.Y, coord, &count);
+			SetConsoleCursorPosition(hStdOut, coord);
+		}
+		return;
 	}
 	void gotoxy(int x, int y)
 	{
-		COORD coord;
-		coord.X = x;
-		coord.Y = y;
+		COORD coord = {x-1, y-1};
 		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
 	}
 	uint16_t ttysize()
 	{
-		struct winsize w;
-		ioctl(0, TIOCGWINSZ, &w);
-		return (w.ws_col << 8) + (w.ws_row & 0xFF);
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+		return (csbi.dwSize.X << 8) + ((csbi.dwSize.Y - 1) & 0xFF);
 	}
 #elif (PLATFORM == PLATFORM_AVR)
 	// FOR DEBUG ONLY!!!
