@@ -9,3 +9,5 @@
 	2: Get char with echo
 	3: Get char w/o echo
 	4: Get EoL symbol
+6: Get TTY size
+7: Flush terminal buffer

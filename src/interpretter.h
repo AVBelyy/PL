@@ -12,6 +12,8 @@
 
 #if (PLATFORM == PLATFORM_AVR)
 	#include <avr/pgmspace.h>
+#else
+	#include <unistd.h>
 #endif
 
 // user-defined constants

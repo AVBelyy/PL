@@ -6,6 +6,15 @@ const:
 header:
 	name = std
 	static library = 0
+delay:
+	mov r1 r0
+	push 2
+	int 0x01
+	ret
+random:
+	push 3
+	int 0x01
+	ret
 strcpy:
 	label loop
 		mov &r0 &r1
@@ -107,6 +116,17 @@ gets:
 	if (r0 == 3) ret
 	call putc( '\n' )
 	ret
+ttysize:
+	push 6
+	int 0x05
+	mov r1 r0
+	shr r0 8
+	and r1 0xFF
+	ret
+refresh:
+	push 7
+	int 0x05
+	ret
 malloc:
 	#	R0		- size in bytes
 	#	(int)R1	- loop counter
@@ -155,7 +175,8 @@ realloc:
 	call malloc(r2)
 	ret
 export:
-	clrscr, gotoxy
+	delay, random
+	clrscr, gotoxy, ttysize, refresh
 	putc, puts
 	getc, getcne, gets
 	itoa, atoi

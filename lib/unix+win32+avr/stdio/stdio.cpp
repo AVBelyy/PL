@@ -14,16 +14,22 @@
 		tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
 		return ch;
 	}
-	void clrscr()
+	inline void clrscr()
 	{
-		system("clear");
+		printf("\033[2J\033[0;0f");
 	}
-	void gotoxy(int x, int y)
+	inline void gotoxy(int x, int y)
 	{
-		printf("%c[%d;%df", 0x1B, y, x); 
+		printf("\033[%d;%df", y, x); 
+	}
+	uint16_t ttysize()
+	{
+		struct winsize w;
+		ioctl(0, TIOCGWINSZ, &w);
+		return (w.ws_col << 8) + (w.ws_row & 0xFF);
 	}
 #elif (PLATFORM == PLATFORM_WIN32)
-	void clrscr()
+	inline void clrscr()
 	{
 		system("cls");
 	}
@@ -33,6 +39,12 @@
 		coord.X = x;
 		coord.Y = y;
 		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+	}
+	uint16_t ttysize()
+	{
+		struct winsize w;
+		ioctl(0, TIOCGWINSZ, &w);
+		return (w.ws_col << 8) + (w.ws_row & 0xFF);
 	}
 #elif (PLATFORM == PLATFORM_AVR)
 	// FOR DEBUG ONLY!!!
@@ -49,6 +61,7 @@
 
 	void clrscr() {}
 	void gotoxy(int x, int y) {}
+	inline uint16_t ttysize() { return 0x1008; }
 #endif
 
 void Stdio::interrupt(process *p)
@@ -73,6 +86,8 @@ void Stdio::interrupt(process *p)
 		p->regs[0] = 0;
 		#endif
 	}
+	else if(p->regs[0] == 6) p->regs[0] = ttysize();
+	else if(p->regs[0] == 7) fflush(stdout);
 };
 Stdio::Stdio()
 {

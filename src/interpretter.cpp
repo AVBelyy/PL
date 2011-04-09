@@ -10,6 +10,13 @@ process *plist[MAX_PROCESS];
 int_handler interrupts[MAX_INTERRUPT];
 uint8_t pcount = 0;
 
+#if (PLATFORM == PLATFORM_UNIX) || (PLATFORM == PLATFORM_WIN32)
+inline void delay(uint16_t ms)
+{
+	usleep((uint32_t)ms * 1000);
+}
+#endif
+
 process::process(char *path)
 {
 	int i, len;
@@ -96,7 +103,8 @@ void process::exec() {
 	FILE *file = (FILE*)owner->f;
 	uint8_t cmd = fgetc(file);
 	if(feof(file)) return;
-	switch(cmd) {
+	switch(cmd)
+	{
 	#ifdef __DEBUG__
 	case 0x00: // NOP
 	{
@@ -270,7 +278,9 @@ void process::exec() {
 		switch(num.value) {
 		case 0x01: // INT 0x01
 		{
-			regs[0] = PLATFORM;	
+			if(regs[0] == 1)		regs[0] = PLATFORM;
+			else if(regs[0] == 2)	delay(regs[1]);
+			else if(regs[0] == 3)	regs[0] = rand() % 0x8000;
 			break;
 		}
 		default:

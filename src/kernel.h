@@ -6,6 +6,7 @@
 #define KERNEL_H
 
 #include <stdint.h>
+#include <time.h>
 
 #define PLATFORM_AVR		1
 #define PLATFORM_WIN32		2
