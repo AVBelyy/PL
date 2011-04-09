@@ -10,12 +10,15 @@ import:
 		ttysize, clrscr, gotoxy, putc, delay, refresh
 code:
 	label loop
-	call clrscr()
 	call ttysize()
+	if (r5 != r0) goto continue
+	if (r6 != r1) goto continue
+	goto loop
+	label continue
 	mov r5 r0
 	mov r6 r1
 	mov r7 r5
-	call gotoxy(1 1)
+	call clrscr()
 	label vline
 	call putc('-')
 	dec r7
@@ -39,5 +42,4 @@ code:
 	dec r7
 	if (r7) goto hline2
 	call refresh()
-	call delay(1000)
 	goto loop
