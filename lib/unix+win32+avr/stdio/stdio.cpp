@@ -29,9 +29,10 @@
 		return (w.ws_col << 8) + (w.ws_row & 0xFF);
 	}
 #elif (PLATFORM == PLATFORM_WIN32)
+	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
 	void clrscr()
 	{
-		HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 		COORD coord = {0, 0};
 		DWORD count;
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -46,12 +47,12 @@
 	void gotoxy(int x, int y)
 	{
 		COORD coord = {x-1, y-1};
-		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+		SetConsoleCursorPosition(hStdOut, coord);
 	}
 	uint16_t ttysize()
 	{
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
-		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+		GetConsoleScreenBufferInfo(hStdOut, &csbi);
 		return (csbi.dwSize.X << 8) + ((csbi.dwSize.Y - 1) & 0xFF);
 	}
 #elif (PLATFORM == PLATFORM_AVR)
@@ -99,6 +100,11 @@ void Stdio::interrupt(process *p)
 };
 Stdio::Stdio()
 {
+	#if (PLATFORM == PLATFORM_WIN32)
+	// Enable line buffering
+	static char ttybuf[0x10000]; // 64 Kbytes
+	setvbuf(stdout, ttybuf, _IOLBF, sizeof(ttybuf));
+	#endif
 	process::attachInterrupt(0x05, &interrupt);
 };
 

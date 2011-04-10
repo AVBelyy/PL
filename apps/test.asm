@@ -26,7 +26,7 @@ code:
 	call putc( '@' )
 	call refresh()
 	call gotoxy( r5 r6 )
-	call putc(' ')
+	call putc( '#' )
 	if ( r7 == 1 ) goto RightDown
 	if ( r7 == 2 ) goto RightUp
 	if ( r7 == 3 ) goto LeftUp
@@ -74,3 +74,4 @@ code:
 	label finally
 	call delay( 25 )
 	goto loop
+	label end
