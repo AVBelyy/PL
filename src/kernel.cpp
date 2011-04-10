@@ -7,7 +7,6 @@ int main() {
 	srand((unsigned)time(NULL));
 	// *** begin kernel code ***
 	process l("libstd.bin");
-	process d("dyn.bin");
 	process p("test.bin");
 	l.share();
 	while(!feof((FILE*)p.f)) p.exec();

@@ -23,7 +23,7 @@
 	#define EOL_SYMBOL		0x0A
 	// In Linux: simulating getch() function from conio.h
 
-        #include <sys/ioctl.h>
+	#include <sys/ioctl.h>
 	#include <stdio.h>
 	#include <termios.h>
 	#include <unistd.h>

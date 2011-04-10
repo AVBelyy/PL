@@ -62,7 +62,7 @@ def search_file(filename, paths):
 	raise IOError, "file '%s' not found" % filename
 
 def splitln(ln):
-	ln = re.sub('"[^"]*"', lambda x: x.group(0).replace(" ", "%%_SPACE_%%").replace("\t", "%%_TAB_%%"), ln)
+	ln = re.sub('("|\')[^("|\')]*("|\')', lambda x: x.group(0).replace(" ", "%%_SPACE_%%").replace("\t", "%%_TAB_%%"), ln)
 	return [x.replace("%%_SPACE_%%", " ").replace("%%_TAB_%%", "\t") for x in re.split("\s+", ln)]
 
 def encode(ln):
@@ -618,7 +618,8 @@ for x in sections["code"]:
 				offset = getlabel(y)
 				o.write(chr(offset >> 8))
 				o.write(chr(offset & 0xff))
-			except: break
+			except:
+				raise CompileError, "unknown label '%s'" % y
 		else: o.write(chr(y & 0xff))
 o.close()
 

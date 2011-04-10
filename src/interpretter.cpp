@@ -160,11 +160,10 @@ void process::exec() {
 	{
 		char cond = fgetc(file);
 		p_operand lvalue = getop(), rvalue = getop();
-		if(!resultFlag) break;
-		if(cond == 0)		resultFlag = (lvalue.value == rvalue.value);
-		else if(cond == 1)	resultFlag = (lvalue.value != rvalue.value);
-		else if(cond == 2)	resultFlag = (lvalue.value <= rvalue.value);
-		else if(cond == 3)	resultFlag = (lvalue.value >= rvalue.value);
+		if(cond == 0)		resultFlag &= (lvalue.value == rvalue.value);
+		else if(cond == 1)	resultFlag &= (lvalue.value != rvalue.value);
+		else if(cond == 2)	resultFlag &= (lvalue.value <= rvalue.value);
+		else if(cond == 3)	resultFlag &= (lvalue.value >= rvalue.value);
 		return;
 	}
 	case 0x10: // MOV
