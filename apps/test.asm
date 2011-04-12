@@ -8,6 +8,11 @@ header:
 import:
 	from "libstd.def"
 		ttysize, clrscr, gotoxy, putc, delay, refresh
+
+write:
+	call gotoxy( )
+	call putc( '@' )
+	ret
 code:
 	# R5 - X coord
 	# R6 - Y coord
@@ -22,9 +27,6 @@ code:
 	call ttysize()
 	mov r8 r0
 	mov r9 r1
-	call gotoxy( r5 r6 )
-	call putc( '@' )
-	call refresh()
 	call gotoxy( r5 r6 )
 	call putc( ' ' )
 	if ( r7 == 1 ) goto RightDown
@@ -72,6 +74,7 @@ code:
 			sub r7 2
 			goto finally
 	label finally
+	call write( r5 r6 )
 	call delay( 25 )
 	goto loop
 	label end

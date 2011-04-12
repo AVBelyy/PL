@@ -96,15 +96,14 @@ void Stdio::interrupt(process *p)
 		#endif
 	}
 	else if(p->regs[0] == 6) p->regs[0] = ttysize();
-	else if(p->regs[0] == 7) fflush(stdout);
 };
 Stdio::Stdio()
 {
-	#if (PLATFORM == PLATFORM_WIN32)
-	// Enable line buffering
-	static char ttybuf[0x10000]; // 64 Kbytes
-	setvbuf(stdout, ttybuf, _IOLBF, sizeof(ttybuf));
+	// Disable buffering
+	#if (PLATFORM == PLATFORM_WIN32) || (PLATFORM == PLATFORM_UNIX)
+	setvbuf(stdout, NULL, _IONBF, 0);
 	#endif
+	// Attach interrupt
 	process::attachInterrupt(0x05, &interrupt);
 };
 

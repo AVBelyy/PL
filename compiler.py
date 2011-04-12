@@ -604,12 +604,15 @@ for x in localProcTable:
 		for z in y[1:]:
 			if type(z) == str:
 				# is it label?
-				try: offset = getlabel(z)
-				except: break
-				o.write(chr(offset >> 8))
-				o.write(chr(offset & 0xff))
+				try:
+					offset = getlabel(z)
+					o.write(chr(offset >> 8))
+					o.write(chr(offset & 0xff))
+				except:
+					raise CompileError, "in procedure '%s': unknown label '%s'" % (curSection, z)
 			else: o.write(chr(z & 0xff))
 #finally write CODE section
+curSection = "code"
 for x in sections["code"]:
 	for y in x[1:]:
 		if type(y) == str:
@@ -619,7 +622,7 @@ for x in sections["code"]:
 				o.write(chr(offset >> 8))
 				o.write(chr(offset & 0xff))
 			except:
-				raise CompileError, "unknown label '%s'" % y
+				raise CompileError, "in procedure 'code': unknown label '%s'" % y
 		else: o.write(chr(y & 0xff))
 o.close()
 
