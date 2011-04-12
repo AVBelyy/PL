@@ -60,6 +60,9 @@
 
 void clrscr();
 void gotoxy(int, int);
+uint16_t ttysize();
+void hidecursor();
+void showcursor();
 
 class Stdio {
 	public:

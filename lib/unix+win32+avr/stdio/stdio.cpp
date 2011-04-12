@@ -28,6 +28,14 @@
 		ioctl(0, TIOCGWINSZ, &w);
 		return (w.ws_col << 8) + (w.ws_row & 0xFF);
 	}
+	inline void hidecursor()
+	{
+		printf("\e[?25l");
+	}
+	inline void showcursor()
+	{
+		printf("\e[?25h");
+	}
 #elif (PLATFORM == PLATFORM_WIN32)
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
@@ -55,6 +63,18 @@
 		GetConsoleScreenBufferInfo(hStdOut, &csbi);
 		return (csbi.dwSize.X << 8) + ((csbi.dwSize.Y - 1) & 0xFF);
 	}
+	void hidecursor()
+	{
+		CONSOLE_CURSOR_INFO cursor;
+		cursor.bVisible = FALSE;
+		SetConsoleCursorInfo(hStdOut, &cursor);
+	}
+	void showcursor()
+	{
+		CONSOLE_CURSOR_INFO cursor;
+		cursor.bVisible = TRUE;
+		SetConsoleCursorInfo(hStdOut, &cursor);
+	}
 #elif (PLATFORM == PLATFORM_AVR)
 	// FOR DEBUG ONLY!!!
 	FILE *stdout;
@@ -71,6 +91,8 @@
 	void clrscr() {}
 	void gotoxy(int x, int y) {}
 	inline uint16_t ttysize() { return 0x1008; }
+	void hidecursor() {}
+	void showcursor() {} 
 #endif
 
 void Stdio::interrupt(process *p)
@@ -96,12 +118,14 @@ void Stdio::interrupt(process *p)
 		#endif
 	}
 	else if(p->regs[0] == 6) p->regs[0] = ttysize();
+	else if(p->regs[0] == 7) hidecursor();
+	else if(p->regs[0] == 8) showcursor();
 };
 Stdio::Stdio()
 {
 	// Disable buffering
 	#if (PLATFORM == PLATFORM_WIN32) || (PLATFORM == PLATFORM_UNIX)
-	setvbuf(stdout, NULL, _IONBF, 0);
+		setvbuf(stdout, NULL, _IONBF, 0);
 	#endif
 	// Attach interrupt
 	process::attachInterrupt(0x05, &interrupt);

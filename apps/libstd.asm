@@ -123,6 +123,14 @@ ttysize:
 	shr r0 8
 	and r1 0xFF
 	ret
+hidecursor:
+	push 7
+	int 0x05
+	ret
+showcursor:
+	push 8
+	int 0x05
+	ret
 malloc:
 	#	R0		- size in bytes
 	#	(int)R1	- loop counter
@@ -172,6 +180,7 @@ realloc:
 	ret
 export:
 	delay, random
+	hidecursor, showcursor
 	clrscr, gotoxy, ttysize
 	putc, puts
 	getc, getcne, gets

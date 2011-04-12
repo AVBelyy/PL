@@ -7,7 +7,7 @@ header:
 	name = test
 import:
 	from "libstd.def"
-		ttysize, clrscr, gotoxy, putc, delay, refresh
+		ttysize, clrscr, gotoxy, putc, delay, hidecursor
 
 write:
 	call gotoxy( )
@@ -23,6 +23,7 @@ code:
 	mov r6 1
 	mov r7 1
 	call clrscr()
+	call hidecursor()
 	label loop
 	call ttysize()
 	mov r8 r0
