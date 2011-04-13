@@ -8,13 +8,34 @@ hal=
 halname=
 inc=
 
+apps()
+{
+	if [ -d apps ]; then
+		printf " = Apps =\n"
+		for app in apps/*.asm; do	
+			name=$(echo $app | cut -d'.' -f1)
+			printf "Compiling `basename $app`.. "
+			python compiler.py $name -Iinclude >/dev/null 2>build.err
+			if [ "$?" -eq 0 ]; then
+				echo OK
+			else
+				echo ERROR
+				exit 1
+			fi
+		done
+	fi
+}
+
 if test -z "$1"; then
 	target=unix
 else
 	target=$1
 fi
 
-if [ "$target" = "avr" ]; then
+if [ "$target" = "apps" ]; then
+	apps
+	exit 0
+elif [ "$target" = "avr" ]; then
 	platform=1
 	cc=avr-g++
 	cflags+="-mmcu=at90usb1286 "
@@ -96,19 +117,7 @@ else
 fi
 rm *.o
 
-if [ -d apps ]; then
-	printf "\n = Apps =\n"
-	for app in apps/*.asm; do	
-		name=$(echo $app | cut -d'.' -f1)
-		printf "Compiling `basename $app`.. "
-		python compiler.py $name -Iinclude >/dev/null 2>build.err
-		if [ "$?" -eq 0 ]; then
-			echo OK
-		else
-			echo ERROR
-			exit 1
-		fi
-	done
-fi
+echo
+apps
 
 if [ -f *.def ]; then rm *.def; fi

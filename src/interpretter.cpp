@@ -82,6 +82,8 @@ process::process(char *path)
 			}
 	// insert process in process list
 	plist[pcount++] = this;
+	// exec signal
+	sigexec(KERNEL_NEWPROCESS, (void*)this);
 }
 uint16_t process::fgetint() {
 	FILE *file = (FILE*)owner->f;

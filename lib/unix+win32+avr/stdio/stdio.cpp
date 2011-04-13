@@ -14,11 +14,11 @@
 		tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
 		return ch;
 	}
-	inline void clrscr()
+	void clrscr()
 	{
 		printf("\033[2J\033[0;0f");
 	}
-	inline void gotoxy(int x, int y)
+	void gotoxy(int x, int y)
 	{
 		printf("\033[%d;%df", y, x); 
 	}
@@ -28,11 +28,11 @@
 		ioctl(0, TIOCGWINSZ, &w);
 		return (w.ws_col << 8) + (w.ws_row & 0xFF);
 	}
-	inline void hidecursor()
+	void hidecursor()
 	{
 		printf("\e[?25l");
 	}
-	inline void showcursor()
+	void showcursor()
 	{
 		printf("\e[?25h");
 	}
@@ -90,7 +90,7 @@
 
 	void clrscr() {}
 	void gotoxy(int x, int y) {}
-	inline uint16_t ttysize() { return 0x1008; }
+	uint16_t ttysize() { return 0x1008; }
 	void hidecursor() {}
 	void showcursor() {} 
 #endif
@@ -120,13 +120,21 @@ void Stdio::interrupt(process *p)
 	else if(p->regs[0] == 6) p->regs[0] = ttysize();
 	else if(p->regs[0] == 7) hidecursor();
 	else if(p->regs[0] == 8) showcursor();
-};
+}
+
+void Stdio::atexit(void *params)
+{
+	showcursor();
+}
+
 Stdio::Stdio()
 {
 	// Disable buffering
 	#if (PLATFORM == PLATFORM_WIN32) || (PLATFORM == PLATFORM_UNIX)
 		setvbuf(stdout, NULL, _IONBF, 0);
 	#endif
+	// Set Ctrl-C and Exit handlers
+	kernel_signal(KERNEL_ATEXIT | KERNEL_ATCTRLC, &atexit);
 	// Attach interrupt
 	process::attachInterrupt(0x05, &interrupt);
 };

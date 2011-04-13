@@ -81,11 +81,12 @@ def getcint(cint):
 		if cint == const[0]:
 			cint = const[1]
 			break
+
+	if cint[-1] == "k":				return getcint(cint[:-1]) * 1024
 	if cint[0] == cint[-1] == "'":	return ord(encode(cint[1:-1])[0])
 	if cint[:2] == "0x":			return int(cint, 16) & 0x7fff
 	elif cint[:2] == "0b":			return int(cint, 2) & 0x7fff
-	if cint[0] == cint[-1] == "'":	return ord(cint[1:-1]) & 0x7fff
-	else:							return int(cint) & 0x7fff
+	return int(cint) & 0x7fff
 
 def procid(proc):
 	proc = proc.strip()
@@ -123,49 +124,44 @@ def getop(op):
 	except: pass
 	if op in [proc["name"] for proc in procTable]:
 		return {"flags": operand["flags"] or 5, "value": 0, "id": procTable[procid(op)]["id"]}
+	# if operand is non-int, check if it is variable pointer or register 
+	# is it const string?
+	if op[0] == op[-1] == '"':
+		global constStrCounter
+		op = getcstr(op)
+		varTable.append({"name": "const_str" + str(constStrCounter), "type": "string", "start": sectionLength["data"], "size": len(op)})
+		sectionLength["data"] += len(op)
+		sections["data"].append(op)
+		constStrCounter += 1
+		return {"flags": 0, "value": sectionLength["data"] - len(op)}
+	# ...or const char?
+	if op[0] == op[-1] == "'": return {"flags": 0, "value": getcint(op)}
+	# i think it's member of struct
+	if op.find(".") != 1:
+		try:
+			struct, member = (re.sub("\\s*", "", token) for token in op.split("."))
+			# search structure members
+			info = [(s["sname"], s["start"]) for s in varTable if s["name"] == struct.lower()][0]
+			members = [s for s in structTable if s["name"] == info[0].lower()][0]["members"]
+			offset = 0
+			for m in members: 
+				if m[0] == member: 	
+					return {"flags": 2 if m[1] == "int" else 1, "value": info[1] + offset}
+				else:
+					offset += m[2]
+		except: pass
+	if op[0] == "&": op, operand["flags"] = op[1:], 1
+	if len(op) == 2 and op[0].lower() == "r" and ord(op[1]) in xrange(48, 58):
+		return {"flags": (not operand["flags"]) + 3, "value": int(op[1])}
+	for x in varTable:
+		if x["name"] == op:
+			if x["type"] == "int" and operand["flags"]: operand["flags"] = 2
+			operand["value"] = x["start"]
+			return operand
 	try:
-		op_int = int(op)
+		operand["value"] = getcint(op)
 	except:
-		# if operand is non-int, check if it is variable pointer or register 
-		# is it const string?
-		if op[0] == op[-1] == '"':
-			global constStrCounter
-			op = getcstr(op)
-			for var in varTable:
-				if var["name"][:9] == "const_str" and op in sections["data"]:
-					print "ERINNERUNG"
-			varTable.append({"name": "const_str" + str(constStrCounter), "type": "string", "start": sectionLength["data"], "size": len(op)})
-			sectionLength["data"] += len(op)
-			sections["data"].append(op)
-			constStrCounter += 1
-			return {"flags": 0, "value": sectionLength["data"] - len(op)}
-		# ...or const char?
-		if op[0] == op[-1] == "'": return {"flags": 0, "value": getcint(op)}
-		# i think it's member of struct
-		if op.find(".") != 1:
-			try:
-				struct, member = (re.sub("\\s*", "", token) for token in op.split("."))
-				# search structure members
-				info = [(s["sname"], s["start"]) for s in varTable if s["name"] == struct.lower()][0]
-				members = [s for s in structTable if s["name"] == info[0].lower()][0]["members"]
-				offset = 0
-				for m in members: 
-					if m[0] == member: 	
-						return {"flags": 2 if m[1] == "int" else 1, "value": info[1] + offset}
-					else:
-						offset += m[2]
-			except: pass
-		if op[0] == "&": op, operand["flags"] = op[1:], 1
-		if len(op) == 2 and op[0].lower() == "r" and ord(op[1]) in xrange(48, 58):
-			return {"flags": (not operand["flags"]) + 3, "value": int(op[1])}
-		for x in varTable:
-			if x["name"] == op:
-				if x["type"] == "int" and operand["flags"]: operand["flags"] = 2
-				operand["value"] = x["start"]
-				return operand
-		if op[:2] not in ("0x", "0b"):
-			raise NameError, "undefined variable '%s'" % op.strip()
-	operand["value"] = getcint(op)
+		raise NameError, "undefined variable '%s'" % op.strip()
 	return operand
 
 def sizeof(t):

@@ -34,7 +34,6 @@
 
 	// In Windows: include conio.h with getch() function
 
-	#include <windows.h>
 	#include <stdio.h>
 	#include <conio.h>
 #elif (PLATFORM == PLATFORM_AVR)
@@ -66,6 +65,7 @@ void showcursor();
 
 class Stdio {
 	public:
+	static void atexit(void*);
 	static void interrupt(process*);
 	Stdio();
 };

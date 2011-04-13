@@ -16,19 +16,22 @@
 	#include <unistd.h>
 #endif
 
-// user-defined constants
-const uint8_t MAX_PROCESS = 16;
-const uint8_t MAX_INTERRUPT = 16;
+// User-defined constants
+#define MAX_PROCESS			16
+#define MAX_INTERRUPT		16
 
-// constants
-const uint8_t OP_CONST = 0;
-const uint8_t OP_CHAR = 1;
-const uint8_t OP_INT = 2;
-const uint8_t OP_REGPTR = 3;
-const uint8_t OP_REG = 4;
-const uint8_t OP_PROCPTR = 5;
+// Signal types
+#define KERNEL_NEWPROCESS	4
 
-//structures
+// Constants
+#define OP_CONST			0
+#define OP_CHAR				1
+#define OP_INT				2
+#define OP_REGPTR			3
+#define OP_REG				4
+#define OP_PROCPTR			5
+
+// Structures
 struct p_procs {
 	char *name;
 	uint16_t id;
