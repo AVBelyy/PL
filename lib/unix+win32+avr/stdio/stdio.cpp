@@ -133,8 +133,6 @@ Stdio::Stdio()
 	#if (PLATFORM == PLATFORM_WIN32) || (PLATFORM == PLATFORM_UNIX)
 		setvbuf(stdout, NULL, _IONBF, 0);
 	#endif
-	// Set Ctrl-C and Exit handlers
-	kernel_signal(KERNEL_ATEXIT | KERNEL_ATCTRLC, &atexit);
 	// Attach interrupt
 	process::attachInterrupt(0x05, &interrupt);
 };

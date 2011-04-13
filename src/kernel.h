@@ -27,7 +27,7 @@
 	#include <windows.h>
 #endif
 
-void kernel_signal(uint16_t, void(*)(void*));
+void kernel_signal(uint16_t, void(*)(void*), void*);
 void sigexec(uint16_t, void*);
 
 #endif

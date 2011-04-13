@@ -15,6 +15,12 @@ random:
 	push 3
 	int 0x01
 	ret
+signal:
+	mov r2 r1
+	mov r1 r0
+	push 4
+	int 0x01
+	ret
 strcpy:
 	label loop
 		mov &r0 &r1
@@ -179,7 +185,7 @@ realloc:
 	call malloc(r2)
 	ret
 export:
-	delay, random
+	delay, random, signal
 	hidecursor, showcursor
 	clrscr, gotoxy, ttysize
 	putc, puts

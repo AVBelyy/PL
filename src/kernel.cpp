@@ -5,16 +5,18 @@ struct __kernel_signal_t
 {
 	uint16_t type;
 	void(*handler)(void *params);
+	void *params;
 };
 
 struct __kernel_signal_t  __sighandlers[MAX_SIGHANDLERS];
 uint16_t __sighandlers_cnt = 0;
 
-void kernel_signal(uint16_t type, void(*handler)(void *params))
+void kernel_signal(uint16_t type, void(*handler)(void *params), void *params)
 {
 	__kernel_signal_t sig;
 	sig.type = type;
 	sig.handler = handler;
+	sig.params = params;
 	__sighandlers[__sighandlers_cnt++] = sig;
 }
 
@@ -22,7 +24,10 @@ void sigexec(uint16_t type, void *params)
 {
 	for(int i = 0; i < __sighandlers_cnt; i++)
 		if(__sighandlers[i].type & type)
-			__sighandlers[i].handler(params);
+			if(__sighandlers[i].params == NULL)
+				__sighandlers[i].handler(params);
+			else
+				__sighandlers[i].handler(__sighandlers[i].params);
 }
 
 #if (PLATFORM == PLATFORM_UNIX)
@@ -44,7 +49,7 @@ BOOL WINAPI __CtrlHandler(DWORD dwCtrlType)
 #endif
 
 int main() {
-	// initialize 
+	// initialize
 	for(uint8_t i = 0; i < MAX_PROCESS; i++) plist[i] = (process*)malloc(sizeof(process*));
 	srand((unsigned)time(NULL));
 	// set Ctrl-C handlers

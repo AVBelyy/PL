@@ -123,7 +123,8 @@ def getop(op):
 		operand["flags"] = 4
 	except: pass
 	if op in [proc["name"] for proc in procTable]:
-		return {"flags": operand["flags"] or 5, "value": 0, "id": procTable[procid(op)]["id"]}
+		pid = procTable[procid(op)]["id"]
+		return {"flags": operand["flags"] or 5, "value": pid, "id": pid}
 	# if operand is non-int, check if it is variable pointer or register 
 	# is it const string?
 	if op[0] == op[-1] == '"':
@@ -197,8 +198,8 @@ def parsecond(cond):
 	for x in ("==", "!=", "<=", ">="):
  		if operator == x:
 			lvalue, rvalue = getop(tokens[0]), getop(tokens[2])
-			checkop(lvalue, xrange(5))
-			checkop(rvalue, xrange(5))
+			checkop(lvalue, xrange(6))
+			checkop(rvalue, xrange(6))
 			return [counter, lvalue, rvalue]
 		counter += 1
 
@@ -340,7 +341,7 @@ def parse(ln):
 				checkop(operand, [4])
 				buf.append(operand["value"])
 				operand = getop(tokens[2])
-				checkop(operand, xrange(5))
+				checkop(operand, xrange(6))
 				buf.append(operand["flags"])
 				buf.append(operand["value"] >> 8)
 				buf.append(operand["value"] & 0xff)	
@@ -350,7 +351,7 @@ def parse(ln):
 				buf.append(getcmd(tokens[0]))
 				for x in (1, 2):
 					operand = getop(tokens[x])
-					checkop(operand, xrange(5))
+					checkop(operand, xrange(4+x))
 					buf.append(operand["flags"])
 					buf.append(operand["value"] >> 8)
 					buf.append(operand["value"] & 0xff)
@@ -358,8 +359,8 @@ def parse(ln):
 			if tokens[0] in ("push", "int"): #1 - any data
 				buf.append(sectionLength[curSection]) # information for bin writer - command offset
 				buf.append(getcmd(tokens[0]))
-				operand = getop(tokens[1])
-				checkop(operand, xrange(5))
+				operand = getop(tokens[1])	
+				checkop(operand, xrange(6))
 				buf.append(operand["flags"])
 				buf.append(operand["value"] >> 8)
 				buf.append(operand["value"] & 0xff)

@@ -7,10 +7,14 @@ header:
 	name = test
 import:
 	from "libstd.def"
-		ttysize, clrscr, gotoxy, putc, delay, hidecursor
+		ttysize, clrscr, gotoxy, putc, delay, showcursor, hidecursor, signal
 
+atexit:
+	call clrscr()
+	call showcursor()
+	ret
 write:
-	call gotoxy( )
+	call gotoxy()
 	call putc( '@' )
 	ret
 code:
@@ -19,6 +23,10 @@ code:
 	# R7 - direction
 	# (int)R8 - Max X coord
 	# (int)R9 - Max Y coord
+	push KERNEL_ATEXIT
+	or r0 KERNEL_ATCTRLC
+	push atexit
+	call signal
 	mov r5 1
 	mov r6 1
 	mov r7 1
@@ -28,6 +36,7 @@ code:
 	call ttysize()
 	mov r8 r0
 	mov r9 r1
+	nop
 	call gotoxy( r5 r6 )
 	call putc( ' ' )
 	if ( r7 == 1 ) goto RightDown

@@ -69,7 +69,7 @@ class process {
 		uint16_t data_size;
 	} header;
 	p_entry entries[10];
-	uint8_t stackPointer, entryLevel;
+	uint8_t stackPointer, entryLevel, breakLevel;
 	bool resultFlag, lockFlag;
 	process *owner;
 	void *f;
@@ -80,8 +80,9 @@ class process {
 	process(char*);
 	uint16_t fgetint();
 	p_operand getop(bool = false);
-	void exec();
+	bool exec();
 	void share();
+	void __call(uint16_t);
 	static process* search(uint16_t);
 	static uint8_t attachInterrupt(uint8_t, void(*)(process*));
 };
