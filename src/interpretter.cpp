@@ -335,7 +335,7 @@ bool process::exec() {
 			}
 	}
 	}
-	return resultFlag = true;
+	return resultFlag = true;;
 }
 void process::share() {
 	// if process isn't library

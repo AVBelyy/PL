@@ -31,10 +31,13 @@ strcpy:
 strlen:
 	xor r1 r1
 	label loop
-		if (&r0==0) ret
+		if (&r0==0) goto return
 		inc r0
 		inc r1
 	goto loop
+	label return
+	mov r0 r1
+	ret
 clrscr:
 	push 1
 	int 0x05

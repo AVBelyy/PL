@@ -60,7 +60,7 @@ int main() {
 	#endif
 	// *** begin kernel code ***
 	process l("libstd.bin");
-	process p("test.bin");
+	process p("mbf.bin");
 	l.share();
 	while(!feof((FILE*)p.f)) p.exec();
 	// At exit..
