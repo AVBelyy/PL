@@ -30,4 +30,5 @@
 void kernel_signal(uint16_t, void(*)(void*), void*);
 void sigexec(uint16_t, void*);
 
+#include <io.h>
 #endif

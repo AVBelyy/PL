@@ -32,23 +32,32 @@
 #define OP_PROCPTR			5
 
 // Structures
-struct p_procs {
+struct p_procs
+{
 	char *name;
 	uint16_t id;
 	uint16_t offset;
 };
 
-struct p_operand {
+struct p_operand
+{
 	uint8_t type;
 	uint32_t value;
 };
 
 class process;
 
-struct p_entry {
+struct p_entry
+{
 	process *p;
 	uint16_t start;
 	uint16_t offset;
+};
+
+struct callproc_t
+{
+	process *p;
+	uint16_t procid;
 };
 
 struct int_handler {
@@ -59,6 +68,8 @@ struct int_handler {
 extern process *plist[MAX_PROCESS];
 extern int_handler interrupts[MAX_INTERRUPT];
 extern uint8_t pcount;
+
+void callproc(void*);
 
 class process {
 	public:
@@ -83,6 +94,7 @@ class process {
 	bool exec();
 	void share();
 	void __call(uint16_t);
+	void extcall(uint16_t);
 	static process* search(uint16_t);
 	static uint8_t attachInterrupt(uint8_t, void(*)(process*));
 };

@@ -7,7 +7,7 @@ header:
 	name = test
 import:
 	from "libstd.def"
-		ttysize, clrscr, gotoxy, putc, delay, showcursor, hidecursor, signal
+		fopen, ttysize, clrscr, gotoxy, putc, delay, showcursor, hidecursor, signal
 
 atexit:
 	call clrscr()
@@ -18,6 +18,9 @@ write:
 	call putc( '@' )
 	ret
 code:
+	call fopen("/dev/stdout" "r")
+	nop
+	goto end
 	# R5 - X coord
 	# R6 - Y coord
 	# R7 - direction

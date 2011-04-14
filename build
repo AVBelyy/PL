@@ -96,7 +96,7 @@ done
 echo
 
 printf "Compiling kernel.. "
-$cc -c src/interpretter.cpp src/kernel.cpp -w -Os -Isrc -Ihal/$halname $inc -DPLATFORM=$platform $cflags >/dev/null 2>build.err
+$cc -c src/io.cpp src/interpretter.cpp src/kernel.cpp -w -Os -Isrc -Ihal/$halname $inc -DPLATFORM=$platform $cflags >/dev/null 2>build.err
 if [ "$?" -eq 0 ]; then
 	echo OK
 else
@@ -105,15 +105,17 @@ else
 fi
 printf "Building kernel.. "
 $cc *.o -okernel $cflags $ldflags >/dev/null 2>build.err
-if [ "$target" = "avr" ]; then
-	avr-objcopy -O ihex kernel kernel.hex
-	rm kernel
-fi
 if [ "$?" -eq 0 ]; then
 	echo OK
 else
 	echo ERROR
 	exit 1
+fi
+if [ "$target" = "avr" ]; then
+	avr-objcopy -O ihex kernel kernel.hex
+	rm kernel
+else
+	if [ -f kernel ]; then strip -s kernel; fi
 fi
 rm *.o
 

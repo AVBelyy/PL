@@ -1,4 +1,4 @@
-#include "stdio.h"
+#include <io.h>
 
 // Platform-dependent functions
 #if (PLATFORM == PLATFORM_UNIX)
@@ -95,7 +95,10 @@
 	void showcursor() {} 
 #endif
 
-void Stdio::interrupt(process *p)
+FILE **IO::files = (FILE**)malloc(sizeof(FILE*) * IO_MAXFILES);
+int IO::filesCount = 0;
+
+void IO::interrupt(process *p)
 {
 	if(p->regs[0] == 1) clrscr();
 	else if(p->regs[0] == 2) gotoxy(p->regs[1] >> 8, p->regs[1] & 0xFF);
@@ -103,7 +106,7 @@ void Stdio::interrupt(process *p)
 	else if(p->regs[0] == 4) fputs((char*)(p->mem + p->regs[1]), stdout);
 	else if(p->regs[0] == 5)
 	{
-		#if (ENABLE_KEYBOARD_SUPPORT != 0)
+		#if (IO_KEYBOARD_SUPPORT != 0)
 		if(p->regs[1] == 1) p->regs[0] = 1;
 		else if(p->regs[1] == 2)
 		{
@@ -120,15 +123,28 @@ void Stdio::interrupt(process *p)
 	else if(p->regs[0] == 6) p->regs[0] = ttysize();
 	else if(p->regs[0] == 7) hidecursor();
 	else if(p->regs[0] == 8) showcursor();
+	else if(p->regs[0] == 9) // File I/O
+	{
+		if(p->regs[1] == 1) // fd fopen(str, str)
+		{
+			p->regs[0] = 0;
+			if(filesCount == IO_MAXFILES)
+				return;
+			files[filesCount] = fopen((char*)(p->mem + p->regs[2]), (char*)(p->mem + p->regs[3]));
+			if(files[filesCount] != NULL)
+				p->regs[0] = fileno(files[filesCount++]);
+		}
+	}
 }
 
-void Stdio::atexit(void *params)
+void IO::atexit(void *params)
 {
 	showcursor();
 }
 
-Stdio::Stdio()
+IO::IO()
 {
+	for(int i = 0; i < IO_MAXFILES; i++) files[i] = (FILE*)malloc(sizeof(FILE*));
 	// Disable buffering
 	#if (PLATFORM == PLATFORM_WIN32) || (PLATFORM == PLATFORM_UNIX)
 		setvbuf(stdout, NULL, _IONBF, 0);
@@ -137,4 +153,4 @@ Stdio::Stdio()
 	process::attachInterrupt(0x05, &interrupt);
 };
 
-Stdio stdio;
+IO io;

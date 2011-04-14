@@ -1,5 +1,5 @@
-#ifndef STDIO_H
-#define STDIO_H
+#ifndef IO_H
+#define IO_H
 
 #include <kernel.h>
 #include <interpretter.h>
@@ -8,7 +8,8 @@
 //		stdio settings
 //
 
-#define ENABLE_KEYBOARD_SUPPORT			1
+#define IO_KEYBOARD_SUPPORT			1
+#define IO_MAXFILES					32
 
 // Disable ncurses's getch()
 #ifdef CURSES
@@ -43,8 +44,7 @@
 	// simulating File IO in AVR
 	// FOR DEBUG ONLY! 
 	const int SEEK_SET = 1;
-	struct FILE {
-	};
+	struct FILE {};
 	extern FILE *stdout;
 	int putchar(char);
 	int printf(const char*, ...);
@@ -63,11 +63,13 @@ uint16_t ttysize();
 void hidecursor();
 void showcursor();
 
-class Stdio {
+ class IO {
 	public:
+	static FILE **files;
+	static int filesCount;
 	static void atexit(void*);
 	static void interrupt(process*);
-	Stdio();
+	IO();
 };
 
 #endif

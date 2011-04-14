@@ -137,6 +137,13 @@ showcursor:
 	push 8
 	int 0x05
 	ret
+fopen:
+	mov r3 r1
+	mov r2 r0
+	push 9
+	push 1
+	int 0x05
+	ret
 malloc:
 	#	R0		- size in bytes
 	#	(int)R1	- loop counter
@@ -188,6 +195,7 @@ export:
 	delay, random, signal
 	hidecursor, showcursor
 	clrscr, gotoxy, ttysize
+	fopen
 	putc, puts
 	getc, getcne, gets
 	itoa, atoi

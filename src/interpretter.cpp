@@ -17,18 +17,12 @@ inline void delay(uint16_t ms)
 }
 #endif
 
-struct __process_sighandler_t
-{
-	process *p;
-	uint16_t procid;
-};
-
-void __process_sighandler(void *params)
+void callproc(void *params)
 {
 	bool result;
-	__process_sighandler_t *sig = reinterpret_cast<struct __process_sighandler_t*>(params);
-	process *p = sig->p;
-	uint16_t procid = sig->procid;
+	callproc_t *info = reinterpret_cast<struct callproc_t*>(params);
+	process *p = info->p;
+	uint16_t procid = info->procid;
 	p->breakLevel = p->entryLevel+1;
 	p->owner = p;
 	// perform call
@@ -170,7 +164,7 @@ bool process::exec() {
 	{
 		sigexec(8, NULL);
 		if(!resultFlag) break;
-		//printf("R0 = %d\nR1 = %d\nR2 = %d\nR3 = %d\n\n", regs[0], regs[1], regs[2], regs[3]);
+		printf("R0 = %d\nR1 = %d\nR2 = %d\nR3 = %d\n\n", regs[0], regs[1], regs[2], regs[3]);
 		break;
 	}
 	#endif
@@ -312,10 +306,10 @@ bool process::exec() {
 			else if(regs[0] == 3)	regs[0] = rand() % 0x8000;
 			else if(regs[0] == 4)
 			{
-				__process_sighandler_t sig;
+				callproc_t sig;
 				sig.p = this;
 				sig.procid = regs[2];
-				kernel_signal(regs[1], &__process_sighandler, (void*)&sig);
+				kernel_signal(regs[1], &callproc, (void*)&sig);
 			}
 			break;
 		}
@@ -352,6 +346,17 @@ void process::share() {
 process* process::search(uint16_t pid) {
 	for(uint8_t i = 0; i < pcount; i++) if(plist[i]->pid == pid) return plist[i];
 	return NULL;
+}
+void process::extcall(uint16_t procid)
+{
+    bool result;
+    breakLevel = entryLevel+1;
+    owner = this;
+    // perform call
+    __call(procid);
+    while(result = exec() == true);
+    breakLevel = 0;
+
 }
 uint8_t process::attachInterrupt(uint8_t id, void (*handler)(process*)) {
 	for(uint16_t i = 0; i < MAX_INTERRUPT; i++) if(!interrupts[i].id) {
