@@ -30,7 +30,6 @@ code:
 		if ( r0 == ']' ) goto endwhile
 		label finally
 		inc r8
-		call fseek(r6 r8 SEEK_SET)
 	goto exec
 
 	# --- begin subroutines ---
