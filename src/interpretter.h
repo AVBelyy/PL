@@ -19,6 +19,7 @@
 // User-defined constants
 #define MAX_PROCESS			16
 #define MAX_INTERRUPT		16
+#define MAX_ENTRIES			16
 
 // Signal types
 #define KERNEL_NEWPROCESS	4
@@ -79,7 +80,7 @@ class process {
 		struct p_procs *procs;
 		uint16_t data_size;
 	} header;
-	p_entry entries[10];
+	p_entry entries[MAX_ENTRIES];
 	uint8_t stackPointer, entryLevel, breakLevel;
 	bool resultFlag, lockFlag;
 	process *owner;

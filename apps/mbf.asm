@@ -3,9 +3,32 @@ import:
 		strlen, putc, getc
 data:
 	mem		string[30000]
-	program string "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.+++++++++++++++++++++++++++++.+++++++..+++.-------------------------------------------------------------------------------.+++++++++++++++++++++++++++++++++++++++++++++++++++++++.++++++++++++++++++++++++.+++.------.--------.-------------------------------------------------------------------.-----------------------."
+	program string "++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>."
+
 code:
-	goto start
+	# R6 - program length
+	# R7 - current cell
+	# R8 - current command
+	# R9 - entry level
+	call strlen(program)
+	mov r6 r0
+	add r6 30000
+	mov r7 0
+	mov r8 30000
+	mov r9 0
+	label exec
+		if ( &r8 == '>' ) inc r7
+		if ( &r8 == '<' ) dec r7
+		if ( &r8 == '+' ) goto inc_cell
+		if ( &r8 == '-' ) goto dec_cell
+		if ( &r8 == '.' ) goto printchar
+		if ( &r8 == ',' ) goto getchar
+		if ( &r8 == '[' ) goto while
+		if ( &r8 == ']' ) goto endwhile
+		label finally
+		inc r8
+	if ( r6 != r8 ) goto exec
+	goto end
 
 	# --- begin subroutines ---
 	label printchar
@@ -25,26 +48,30 @@ code:
 		call putc()
 		mov &r7 r0
 	goto finally
+	label while
+		if ( &r7 != 0 ) goto finally
+		inc r9
+		label strip
+			if ( r9 == 0 ) goto finally_while
+			inc r8
+			if ( &r8 == '[' ) inc r9
+			if ( &r8 == ']' ) dec r9
+		goto strip
+		label finally_while
+		inc r8
+	goto finally
+	label endwhile
+		if ( &r7 == 0 ) goto finally
+		dec r9
+		label end_strip
+			if ( r9 == 0 ) goto finally_endwhile
+			dec r8
+			if ( &r8 == '[' ) inc r9
+			if ( &r8 == ']' ) dec r9
+		goto end_strip
+		label finally_endwhile
+		dec r8
+	goto finally
 	# --- end subroutines ---
 
-	label start
-	# R5 - loop variable
-	# R6 - program length
-	# R7 - current cell
-	# R8 - cur command ptr
-	call strlen(program)
-	mov r5 0
-	mov r6 r0
-	mov r7 0
-	label exec
-		mov r8 30000
-		add r8 r5
-		if ( &r8 == '>' ) inc r7
-		if ( &r8 == '<' ) dec r7
-		if ( &r8 == '+' ) goto inc_cell
-		if ( &r8 == '-' ) goto dec_cell
-		if ( &r8 == '.' ) goto printchar
-		if ( &r8 == ',' ) goto getchar
-		label finally
-		inc r5
-	if ( r5 != r6 ) goto exec
+	label end
