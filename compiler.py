@@ -84,9 +84,9 @@ def getcint(cint):
 
 	if cint[-1] == "k":				return getcint(cint[:-1]) * 1024
 	if cint[0] == cint[-1] == "'":	return ord(encode(cint[1:-1])[0])
-	if cint[:2] == "0x":			return int(cint, 16) & 0x7fff
-	elif cint[:2] == "0b":			return int(cint, 2) & 0x7fff
-	return int(cint) & 0x7fff
+	if cint[:2] == "0x":			return int(cint, 16)& 0xffff
+	elif cint[:2] == "0b":			return int(cint, 2) & 0xffff
+	return int(cint) & 0xffff
 
 def procid(proc):
 	proc = proc.strip()

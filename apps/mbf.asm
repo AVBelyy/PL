@@ -1,36 +1,44 @@
 #include <libstd.inc>
 
 const:
-	MEM_SIZE	30000
+	MEM_SIZE	40000
 header:
 	heap = MEM_SIZE	
 import:
 	from "libstd.def"
+		malloc
 		strlen, putc, getc
-static:
-	program string "++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>."
+		fopen, fgetc, fsize, fseek
+seek_l:
+	dec r8
+	call fseek( r6 r8 SEEK_SET )
+	ret
+seek_r:
+	inc r8
+	call fseek( r6 r8 SEEK_SET )
+	ret
 code:
-	# R6 - program length
+	# R5 - current command
+	# R6 - file descriptor
 	# R7 - current cell
-	# R8 - current command
+	# R8 - current command number
 	# R9 - entry level
-	call strlen(program)
+	call fopen("program.bf" "rb")
 	mov r6 r0
-	add r6 MEM_SIZE
-	mov r8 MEM_SIZE
 	label exec
-		if ( &r8 == '>' ) inc r7
-		if ( &r8 == '<' ) dec r7
-		if ( &r8 == '+' ) goto inc_cell
-		if ( &r8 == '-' ) goto dec_cell
-		if ( &r8 == '.' ) goto printchar
-		if ( &r8 == ',' ) goto getchar
-		if ( &r8 == '[' ) goto while
-		if ( &r8 == ']' ) goto endwhile
+		call fgetc( r6 )
+		if ( r0 == EOF ) goto end
+		if ( r0 == '>' ) inc r7
+		if ( r0 == '<' ) dec r7
+		if ( r0 == '+' ) goto inc_cell 
+		if ( r0 == '-' ) goto dec_cell
+		if ( r0 == '.' ) goto printchar
+		if ( r0 == ',' ) goto getchar
+		if ( r0 == '[' ) goto while
+		if ( r0 == ']' ) goto endwhile
 		label finally
-		inc r8
-	if ( r6 != r8 ) goto exec
-	goto end
+		call seek_r
+	goto exec
 
 	# --- begin subroutines ---
 	label printchar
@@ -57,9 +65,10 @@ code:
 		inc r9
 		label strip
 			if ( r9 == 0 ) goto finally_while
-			inc r8
-			if ( &r8 == '[' ) inc r9
-			if ( &r8 == ']' ) dec r9
+			call seek_r
+			call fgetc( r6 )
+			if ( r0 == '[' ) inc r9
+			if ( r0 == ']' ) dec r9
 		goto strip
 		label finally_while
 	goto finally
@@ -68,12 +77,13 @@ code:
 		dec r9
 		label end_strip
 			if ( r9 == 0 ) goto finally_endwhile
-			dec r8
-			if ( &r8 == '[' ) inc r9
-			if ( &r8 == ']' ) dec r9
+			call seek_l
+			call fgetc( r6 )
+			if ( r0 == '[' ) inc r9
+			if ( r0 == ']' ) dec r9
 		goto end_strip
 		label finally_endwhile
-		dec r8
+		call seek_l
 	goto finally
 	# --- end subroutines ---
 

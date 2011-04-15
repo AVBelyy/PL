@@ -67,6 +67,7 @@ void showcursor();
 	public:
 	static FILE **files;
 	static int filesCount;
+	static FILE *searchFile(int);
 	static void atexit(void*);
 	static void interrupt(process*);
 	IO();

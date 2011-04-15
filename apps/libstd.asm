@@ -144,10 +144,30 @@ fopen:
 	push 1
 	int 0x05
 	ret
+fgetc:
+	mov r2 r0
+	push 9
+	push 2
+	int 0x05
+	ret
+fsize:
+	mov r2 r0
+	push 9
+	push 3
+	int 0x05
+	ret
+fseek:
+	mov r4 r2
+	mov r3 r1
+	mov r2 r0
+	push 9
+	push 4
+	int 0x05
+	ret
 malloc:
 	#	R0		- size in bytes
 	#	(int)R1	- loop counter
-	#	(int)R2	- max block size	
+	#	(int)R2	- max block size
 	if (r0>=256) goto fail
 	xor r1 r1
 	xor r2 r2
@@ -195,6 +215,7 @@ memset:
 	#	R0		- ptr
 	#	R1		- value to be set
 	#	R2		- number of bytes
+	mod r1 0xFF
 	label loop
 		if (r2 == 0) ret
 		mov &r0 r1
@@ -205,7 +226,7 @@ export:
 	delay, random, signal
 	hidecursor, showcursor
 	clrscr, gotoxy, ttysize
-	fopen
+	fopen, fgetc, fsize, fseek
 	putc, puts
 	getc, getcne, gets
 	itoa, atoi

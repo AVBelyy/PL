@@ -98,6 +98,14 @@
 FILE **IO::files = (FILE**)malloc(sizeof(FILE*) * IO_MAXFILES);
 int IO::filesCount = 0;
 
+FILE* IO::searchFile(int fd)
+{
+	for(int i = 0; i < filesCount; i++)
+		if(fileno(files[i]) == fd)
+			return files[i];
+	return NULL;
+}
+
 void IO::interrupt(process *p)
 {
 	if(p->regs[0] == 1) clrscr();
@@ -133,6 +141,30 @@ void IO::interrupt(process *p)
 			files[filesCount] = fopen((char*)(p->mem + p->regs[2]), (char*)(p->mem + p->regs[3]));
 			if(files[filesCount] != NULL)
 				p->regs[0] = fileno(files[filesCount++]);
+		} else if(p->regs[1] == 2) // char fgetc(fd)
+		{
+			FILE *f = IO::searchFile(p->regs[2]);
+			if(f == NULL || ((p->regs[0] = fgetc(f)) == EOF))
+				p->regs[0] = 0x100;
+		} else if(p->regs[1] == 3) // uint32_t fsize(fd)
+		{
+			FILE *f = IO::searchFile(p->regs[2]);
+			if(f == NULL)
+			{
+				p->regs[0] = 0;
+				return;
+			}
+			uint32_t cur = ftell(f);
+			fseek(f, 0, SEEK_END);
+			p->regs[0] = ftell(f);
+			fseek(f, cur, SEEK_SET); 
+		} else if(p->regs[1] == 4) // int fseek(fd, long, int)
+		{
+			FILE *f = IO::searchFile(p->regs[2]);
+			if(f == NULL)
+				p->regs[0] = 1;
+			else
+				p->regs[0] = fseek(f, p->regs[3], p->regs[4]);
 		}
 	}
 }
