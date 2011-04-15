@@ -1,6 +1,3 @@
-const:
-	NO_HEAP
-
 #include <libstd.inc>
 
 header:
@@ -20,7 +17,6 @@ write:
 code:
 	call fopen("/dev/stdout" "r")
 	nop
-	goto end
 	# R5 - X coord
 	# R6 - Y coord
 	# R7 - direction
@@ -39,7 +35,6 @@ code:
 	call ttysize()
 	mov r8 r0
 	mov r9 r1
-	nop
 	call gotoxy( r5 r6 )
 	call putc( ' ' )
 	if ( r7 == 1 ) goto RightDown

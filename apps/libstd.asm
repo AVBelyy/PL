@@ -1,6 +1,3 @@
-const:
-	NO_HEAP
-
 #include <libstd.inc>
 
 header:
@@ -194,6 +191,16 @@ realloc:
 	call free()
 	call malloc(r2)
 	ret
+memset:
+	#	R0		- ptr
+	#	R1		- value to be set
+	#	R2		- number of bytes
+	label loop
+		if (r2 == 0) ret
+		mov &r0 r1
+		inc r0
+		dec r2
+	goto loop
 export:
 	delay, random, signal
 	hidecursor, showcursor
@@ -204,3 +211,4 @@ export:
 	itoa, atoi
 	strcpy, strlen
 	malloc, realloc, free
+	memset

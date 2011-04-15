@@ -61,6 +61,7 @@ int main() {
 	// *** begin kernel code ***
 	process l("libstd.bin");
 	process p("mbf.bin");
+	//process p("test.bin");
 	l.share();
 	while(!feof((FILE*)p.f)) p.exec();
 	// At exit..

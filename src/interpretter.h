@@ -78,7 +78,8 @@ class process {
 		uint8_t procs_cnt;
 		uint8_t lib_byte;
 		struct p_procs *procs;
-		uint16_t data_size;
+		uint16_t heap_size;
+		uint16_t static_size;
 	} header;
 	p_entry entries[MAX_ENTRIES];
 	uint8_t stackPointer, entryLevel, breakLevel;

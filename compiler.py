@@ -38,9 +38,9 @@ opcodes = (
 	("calld",	0x18), #
 )
 
-curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "data": 0}, {"code": [], "data": []}
-reservedSections = ("header", "data", "const", "import", "export", "code")
-header = {"name": "", "library": False}
+curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "static": 0}, {"code": [], "static": []}
+reservedSections = ("header", "static", "const", "import", "export", "code")
+header = {"name": "", "library": False, "heapSize": 0}
 varTable, constTable, labelTable, procTable = [], [], [], []
 structTable, structPtr = [], -1
 exportTable, importTable, curLibrary = [], [], ""
@@ -113,6 +113,9 @@ def checkop(operand, flags):
 def getop(op):
 	operand = {"flags": 0, "value": 0}
 	op = op.strip()
+	if not op: return operand
+	# special values
+	if op == "HEAP_SIZE": return {"flags": 4, "value": 10}
 	for x in constTable:
 		if x[0] == op.lower(): return getop(x[1])
 	try:
@@ -130,11 +133,11 @@ def getop(op):
 	if op[0] == op[-1] == '"':
 		global constStrCounter
 		op = getcstr(op)
-		varTable.append({"name": "const_str" + str(constStrCounter), "type": "string", "start": sectionLength["data"], "size": len(op)})
-		sectionLength["data"] += len(op)
-		sections["data"].append(op)
+		varTable.append({"name": "const_str" + str(constStrCounter), "type": "string", "start": sectionLength["static"], "size": len(op)})
+		sectionLength["static"] += len(op)
+		sections["static"].append(op)
 		constStrCounter += 1
-		return {"flags": 0, "value": sectionLength["data"] - len(op)}
+		return {"flags": 0, "value": header["heapSize"] + sectionLength["static"] - len(op)}
 	# ...or const char?
 	if op[0] == op[-1] == "'": return {"flags": 0, "value": getcint(op)}
 	# i think it's member of struct
@@ -144,7 +147,7 @@ def getop(op):
 			# search structure members
 			info = [(s["sname"], s["start"]) for s in varTable if s["name"] == struct.lower()][0]
 			members = [s for s in structTable if s["name"] == info[0].lower()][0]["members"]
-			offset = 0
+			offset = header["heapSize"]
 			for m in members: 
 				if m[0] == member: 	
 					return {"flags": 2 if m[1] == "int" else 1, "value": info[1] + offset}
@@ -157,7 +160,7 @@ def getop(op):
 	for x in varTable:
 		if x["name"] == op:
 			if x["type"] == "int" and operand["flags"]: operand["flags"] = 2
-			operand["value"] = x["start"]
+			operand["value"] = header["heapSize"] + x["start"]
 			return operand
 	try:
 		operand["value"] = getcint(op)
@@ -316,7 +319,9 @@ def parse(ln):
 				if "library" in cmd:
 					if "static" in cmd and getcint(arg) == None:
 						raise CompileError, "static library must have PID"
-					header["library"] = {"static": "static" in cmd, "pid": "static" in cmd and getcint(arg) or 0}
+					header["library"] = {"static": "static" in cmd, "pid": "static" in cmd and getop(arg)["value"] or 0}
+				if "heap" in cmd:
+					header["heapSize"] = getop(arg)["value"]
 		elif curSection == "const":
 			const = re.split("\\s+", ln, 1)
 			if const[0].lower() not in [c[0] for c in constTable]:
@@ -427,7 +432,7 @@ def parse(ln):
 				buf.append(operand["value"] >> 8)
 				buf.append(operand["value"] & 0xff)
 				sectionLength[curSection] += 4
-		elif curSection == "data":
+		elif curSection == "static":
 			tokens = re.split("\\s+", ln, 2)
 			if tokens[0].lower() == "ends":
 				structPtr = -1
@@ -442,7 +447,7 @@ def parse(ln):
 				return
 			vartype = tokens[1].lower()
 			varname = tokens[0]
-			variable = {"name": varname, "type": vartype, "start": sectionLength["data"], "size": 0}
+			variable = {"name": varname, "type": vartype, "start": sectionLength["static"], "size": 0}
 			if re.match("string", vartype):
 				buf, flag = "", 0	
 				try: # if string has fixed length
@@ -457,13 +462,13 @@ def parse(ln):
 				except: flag += 1
 				if flag == 2:
 					raise TypeError, "can't get length of string '%s'" % varname
-				sectionLength["data"] += len(buf)
+				sectionLength["static"] += len(buf)
 				variable["size"] = len(buf)
 				variable["type"] = "string"
 			elif vartype == "int":
 				try:	cint = getcint(tokens[2])
 				except:	cint = 0
-				sectionLength["data"] += 2;
+				sectionLength["static"] += 2;
 				buf = chr(cint >> 8) + chr(cint & 0xff)
 				variable["size"] = 2
 			elif vartype == "struct":
@@ -472,7 +477,7 @@ def parse(ln):
 			elif vartype in (struct["name"] for struct in structTable):
 				size = sizeof(vartype)
 				buf = "\0" * size
-				sectionLength["data"] += len(buf)
+				sectionLength["static"] += len(buf)
 				variable["sname"] = vartype
 				variable["size"] = size
 				variable["type"] = "string"
@@ -543,7 +548,7 @@ while ln:
 	parse(ln)
 f.close()
 
-#write data to file
+#write static data to file
 o = open(basename(outpath) + ".bin", "wb")
 #first of all, write header
 if header["library"] and not header["name"]:
@@ -554,18 +559,18 @@ if header["library"] and not (0 <= header["library"]["pid"] < 64):
 	raise CompileError, "incorrect PID"
 
 o.write(chr(len(header["name"])) + header["name"])
-# calucate data size
-dataSize = 0
-for x in sections["data"]: dataSize += len(x)
+# calucate static data size
+staticSize = 0
+for x in sections["static"]: staticSize += len(x)
 # calculate entry point
 localProcTable = [x for x in procTable if not x["global"]]
 exportProcs = [x["name"] for x in exportTable]
 if header["library"] and not header["library"]["static"]:
 	# if dynamic library
-	entryPoint = len(header["name"]) + len("" if not exportProcs else reduce(lambda x, y: x + y, (x["name"] for x in localProcTable if x["name"] in exportProcs))) + len(localProcTable) * 4 + dataSize + 7
+	entryPoint = len(header["name"]) + len("" if not exportProcs else reduce(lambda x, y: x + y, (x["name"] for x in localProcTable if x["name"] in exportProcs))) + len(localProcTable) * 4 + staticSize + 9
 else:
 	# if static library or application
-	entryPoint = len(header["name"]) + len(localProcTable) * 4 + dataSize + 7
+	entryPoint = len(header["name"]) + len(localProcTable) * 4 + staticSize + 9
 # write function table
 o.write(chr(len(localProcTable)))
 if header["library"]:
@@ -590,10 +595,12 @@ for x in localProcTable:
 	o.write(chr(entryPoint >> 8) + chr(entryPoint & 0xff))
 	entryPoint += sectionLength[x["name"]]
 if not len(sections["code"]): entryPoint = 0
+heapSize = header["heapSize"]
 o.write(chr(entryPoint >> 8) + chr(entryPoint & 0xff))
-o.write(chr(dataSize >> 8) + chr(dataSize & 0xff))
+o.write(chr(heapSize   >> 8) + chr(heapSize   & 0xff)) 
+o.write(chr(staticSize >> 8) + chr(staticSize & 0xff))
 #secondly write DATA section
-for x in sections["data"]: o.write(x)
+for x in sections["static"]: o.write(x)
 #thirdly write user-defined sections (procedures)
 for x in localProcTable:
 	curSection = x["name"]

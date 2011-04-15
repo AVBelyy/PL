@@ -1,12 +1,14 @@
+#include <libstd.inc>
+
 const:
 	MEM_SIZE	30000
+header:
+	heap = MEM_SIZE	
 import:
 	from "libstd.def"
 		strlen, putc, getc
-data:
-	mem		string[MEM_SIZE]
+static:
 	program string "++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>."
-
 code:
 	# R6 - program length
 	# R7 - current cell
@@ -15,9 +17,7 @@ code:
 	call strlen(program)
 	mov r6 r0
 	add r6 MEM_SIZE
-	mov r7 0
 	mov r8 MEM_SIZE
-	mov r9 0
 	label exec
 		if ( &r8 == '>' ) inc r7
 		if ( &r8 == '<' ) dec r7
@@ -39,11 +39,13 @@ code:
 	label inc_cell
 		mov r0 &r7
 		inc r0
+		mod r0 0xFF
 		mov &r7 r0
 	goto finally
 	label dec_cell
 		mov r0 &r7
 		dec r0
+		mod r0 0xFF
 		mov &r7 r0
 	goto finally
 	label getchar
@@ -60,7 +62,6 @@ code:
 			if ( &r8 == ']' ) dec r9
 		goto strip
 		label finally_while
-		inc r8
 	goto finally
 	label endwhile
 		if ( &r7 == 0 ) goto finally
