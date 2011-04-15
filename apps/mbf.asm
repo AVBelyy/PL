@@ -9,14 +9,6 @@ import:
 		malloc
 		strlen, putc, getc
 		fopen, fgetc, fsize, fseek
-seek_l:
-	dec r8
-	call fseek( r6 r8 SEEK_SET )
-	ret
-seek_r:
-	inc r8
-	call fseek( r6 r8 SEEK_SET )
-	ret
 code:
 	# R5 - current command
 	# R6 - file descriptor
@@ -37,7 +29,8 @@ code:
 		if ( r0 == '[' ) goto while
 		if ( r0 == ']' ) goto endwhile
 		label finally
-		call seek_r
+		inc r8
+		call fseek(r6 r8 SEEK_SET)
 	goto exec
 
 	# --- begin subroutines ---
@@ -65,7 +58,7 @@ code:
 		inc r9
 		label strip
 			if ( r9 == 0 ) goto finally_while
-			call seek_r
+			inc r8
 			call fgetc( r6 )
 			if ( r0 == '[' ) inc r9
 			if ( r0 == ']' ) dec r9
@@ -77,13 +70,14 @@ code:
 		dec r9
 		label end_strip
 			if ( r9 == 0 ) goto finally_endwhile
-			call seek_l
+			dec r8
+			call fseek( r6 r8 SEEK_SET )
 			call fgetc( r6 )
 			if ( r0 == '[' ) inc r9
 			if ( r0 == ']' ) dec r9
 		goto end_strip
 		label finally_endwhile
-		call seek_l
+		dec r8
 	goto finally
 	# --- end subroutines ---
 
