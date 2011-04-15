@@ -1,8 +1,10 @@
+const:
+	MEM_SIZE	30000
 import:
 	from "libstd.def"
 		strlen, putc, getc
 data:
-	mem		string[30000]
+	mem		string[MEM_SIZE]
 	program string "++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>."
 
 code:
@@ -12,9 +14,9 @@ code:
 	# R9 - entry level
 	call strlen(program)
 	mov r6 r0
-	add r6 30000
+	add r6 MEM_SIZE
 	mov r7 0
-	mov r8 30000
+	mov r8 MEM_SIZE
 	mov r9 0
 	label exec
 		if ( &r8 == '>' ) inc r7
