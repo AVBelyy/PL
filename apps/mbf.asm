@@ -50,7 +50,7 @@ code:
 		mov &r7 r0
 	goto finally
 	label getchar
-		call putc()
+		call getc()
 		mov &r7 r0
 	goto finally
 	label while
