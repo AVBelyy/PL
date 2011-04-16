@@ -9,7 +9,15 @@ import:
 		malloc
 		strlen, putc, getc
 		fopen, fgetc, fsize, fseek
+		signal, showcursor
+atexit:
+	call showcursor()
+	ret
 code:
+	push KERNEL_ATEXIT
+    or r0 KERNEL_ATCTRLC
+    push atexit
+    call signal
 	# R5 - current command
 	# R6 - file descriptor
 	# R7 - current cell

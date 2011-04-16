@@ -72,7 +72,6 @@ code:
 			sub r7 2
 			goto finally
 	label LeftDown
-		goto end
 		dec r5
 		inc r6
 		if ( r6 == r9 ) if ( r5 == 1 ) goto LeftDownCorner

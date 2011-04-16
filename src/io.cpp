@@ -1,17 +1,16 @@
 #include <io.h>
 
 // Platform-dependent functions
-#if (PLATFORM == PLATFORM_UNIX)
+#if (PLATFORM == PLATFORM_UNIX) && (IO_KEYBOARD_SUPPORT)
+	struct termios oldt;
 	char getch()
 	{
-		struct termios oldt, newt;
+		struct termios newt = oldt;
 		int ch;
-		tcgetattr( STDIN_FILENO, &oldt );
-		newt = oldt;
-		newt.c_lflag &= ~( ICANON | ECHO );
-		tcsetattr( STDIN_FILENO, TCSANOW, &newt );
+		newt.c_lflag &= ~(ICANON | ECHO);
+		tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 		ch = getchar();
-		tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
+		tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 		return ch;
 	}
 	void clrscr()
@@ -114,7 +113,7 @@ void IO::interrupt(process *p)
 	else if(p->regs[0] == 4) fputs((char*)(p->mem + p->regs[1]), stdout);
 	else if(p->regs[0] == 5)
 	{
-		#if (IO_KEYBOARD_SUPPORT != 0)
+		#if (IO_KEYBOARD_SUPPORT)
 		if(p->regs[1] == 1) p->regs[0] = 1;
 		else if(p->regs[1] == 2)
 		{
@@ -171,12 +170,19 @@ void IO::interrupt(process *p)
 
 void IO::atexit(void *params)
 {
-	showcursor();
+	#if (PLATFORM == PLATFORM_UNIX) && (IO_KEYBOARD_SUPPORT)
+        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	#endif
 }
 
 IO::IO()
 {
 	for(int i = 0; i < IO_MAXFILES; i++) files[i] = (FILE*)malloc(sizeof(FILE*));
+	// On UNIX save current terminal info
+	#if (PLATFORM == PLATFORM_UNIX) && (IO_KEYBOARD_SUPPORT)
+		tcgetattr(STDIN_FILENO, &oldt);
+		kernel_signal(KERNEL_ATEXIT | KERNEL_ATCTRLC, &atexit, NULL);
+	#endif
 	// Disable buffering
 	#if (PLATFORM == PLATFORM_WIN32) || (PLATFORM == PLATFORM_UNIX)
 		setvbuf(stdout, NULL, _IONBF, 0);
