@@ -1,18 +1,20 @@
 #include <io.h>
 
 // Platform-dependent functions
-#if (PLATFORM == PLATFORM_UNIX) && (IO_KEYBOARD_SUPPORT)
-	struct termios oldt;
-	char getch()
-	{
-		struct termios newt = oldt;
-		int ch;
-		newt.c_lflag &= ~(ICANON | ECHO);
-		tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-		ch = getchar();
-		tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-		return ch;
+#if (PLATFORM == PLATFORM_UNIX)
+	#if (IO_KEYBOARD_SUPPORT)
+		struct termios oldt;
+		char getch()
+		{
+			struct termios newt = oldt;
+			int ch;
+			newt.c_lflag &= ~(ICANON | ECHO);
+			tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+			ch = getchar();
+			tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+			return ch;
 	}
+	#endif
 	void clrscr()
 	{
 		printf("\033[2J\033[0;0f");
@@ -114,17 +116,17 @@ void IO::interrupt(process *p)
 	else if(p->regs[0] == 5)
 	{
 		#if (IO_KEYBOARD_SUPPORT)
-		if(p->regs[1] == 1) p->regs[0] = 1;
-		else if(p->regs[1] == 2)
-		{
-			char c = getch();
-			putchar(c);
-			p->regs[0] = c;
-		}
-		else if(p->regs[1] == 3) p->regs[0] = getch();
-		else if(p->regs[1] == 4) p->regs[0] = EOL_SYMBOL;
+			if(p->regs[1] == 1) p->regs[0] = 1;
+			else if(p->regs[1] == 2)
+			{
+				char c = getch();
+				putchar(c);
+				p->regs[0] = c;
+			}
+			else if(p->regs[1] == 3) p->regs[0] = getch();
+			else if(p->regs[1] == 4) p->regs[0] = EOL_SYMBOL;
 		#else
-		p->regs[0] = 0;
+			p->regs[0] = 0;
 		#endif
 	}
 	else if(p->regs[0] == 6) p->regs[0] = ttysize();
