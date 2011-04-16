@@ -164,6 +164,40 @@ fseek:
 	push 4
 	int 0x05
 	ret
+fputc:
+	mov r3 r1
+	mov r2 r0
+	push 9
+	push 5
+	int 0x05
+	ret
+fputs:
+	mov r3 r1
+	mov r2 r0
+	push 9
+	push 6
+	int 0x05
+	ret
+fgets:
+	mov r4 r2
+	mov r3 r1
+	mov r2 r0
+	push 9
+	push 7
+	int 0x05
+	ret
+fclose:
+	mov r2 r0
+	push 9
+	push 8
+	int 0x05
+	ret
+feof:
+	mov r2 r0
+	push 9
+	push 9
+	int 0x05
+	ret
 malloc:
 	#	R0		- size in bytes
 	#	(int)R1	- loop counter
@@ -226,7 +260,8 @@ export:
 	delay, random, signal
 	hidecursor, showcursor
 	clrscr, gotoxy, ttysize
-	fopen, fgetc, fsize, fseek
+	fopen, fgetc, fsize, fseek, fputc, fputs
+	fgets, fclose, feof
 	putc, puts
 	getc, getcne, gets
 	itoa, atoi

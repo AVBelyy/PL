@@ -145,7 +145,7 @@ void IO::interrupt(process *p)
 		} else if(p->regs[1] == 2) // char fgetc(fd)
 		{
 			FILE *f = IO::searchFile(p->regs[2]);
-			if(f == NULL || ((p->regs[0] = fgetc(f)) == EOF))
+			if((p->regs[0] = fgetc(f)) == EOF)
 				p->regs[0] = 0x100;
 		} else if(p->regs[1] == 3) // uint32_t fsize(fd)
 		{
@@ -162,10 +162,31 @@ void IO::interrupt(process *p)
 		} else if(p->regs[1] == 4) // int fseek(fd, long, int)
 		{
 			FILE *f = IO::searchFile(p->regs[2]);
-			if(f == NULL)
-				p->regs[0] = 1;
-			else
-				p->regs[0] = fseek(f, p->regs[3], p->regs[4]);
+			p->regs[0] = fseek(f, p->regs[3], p->regs[4]);
+		} else if(p->regs[1] == 5) // int fputc(int, fd)
+		{
+			FILE *f = IO::searchFile(p->regs[3]);
+			if((p->regs[0] = fputc(p->regs[2], f)) == EOF)
+				p->regs[0] = 0x100;
+		} else if(p->regs[1] == 6) // int fputs(char*, fd)
+		{
+			FILE *f = IO::searchFile(p->regs[3]);
+			if((p->regs[0] = fputs((char*)(p->mem + p->regs[2]), f)) == EOF)
+				p->regs[0] = 0x100;
+		} else if(p->regs[1] == 7) // int fgets(char*, int, fd)
+		{
+			FILE *f = IO::searchFile(p->regs[4]);
+			if(f == NULL) return;
+			fgets((char*)(p->mem + p->regs[2]), p->regs[3], f);
+		} else if(p->regs[1] == 8) // int fclose(fd)
+		{
+			FILE *f = IO::searchFile(p->regs[2]);
+			if((p->regs[0] = fclose(f)) == EOF)
+				p->regs[0] = 0x100;
+		} else if(p->regs[1] == 9) // int feof(fd)
+		{
+			FILE *f = IO::searchFile(p->regs[2]);
+			p->regs[0] = feof(f);
 		}
 	}
 }
