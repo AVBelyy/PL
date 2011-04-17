@@ -36,7 +36,6 @@
 	// In Windows: include conio.h with getch() function
 
 	#include <stdio.h>
-	#include <conio.h>
 #elif (PLATFORM == PLATFORM_AVR)
 	#define EOL_SYMBOL		0x0A
 	#undef ENABLE_KEYBOARD_SUPPORT

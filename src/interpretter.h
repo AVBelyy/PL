@@ -12,7 +12,7 @@
 
 #if (PLATFORM == PLATFORM_AVR)
 	#include <avr/pgmspace.h>
-#else
+#elif (PLATFORM == PLATFORM_UNIX)
 	#include <unistd.h>
 #endif
 

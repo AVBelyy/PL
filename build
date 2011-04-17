@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cc=clang
+cc=g++
 cflags="-D__DEBUG__"
 ldflags=
 
@@ -115,7 +115,7 @@ if [ "$target" = "avr" ]; then
 	avr-objcopy -O ihex kernel kernel.hex
 	rm kernel
 else
-	if [ -f kernel ]; then strip -s kernel; fi
+	if [ -f kernel ]; then strip -s kernel*; fi
 fi
 rm *.o
 

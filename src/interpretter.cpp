@@ -10,11 +10,16 @@ process *plist[MAX_PROCESS];
 int_handler interrupts[MAX_INTERRUPT];
 uint8_t pcount = 0;
 
-#if (PLATFORM == PLATFORM_UNIX) || (PLATFORM == PLATFORM_WIN32)
-inline void delay(uint16_t ms)
-{
-	usleep((uint32_t)ms * 1000);
-}
+#if (PLATFORM == PLATFORM_UNIX)
+	inline void delay(uint16_t ms)
+	{
+		usleep((uint32_t)ms * 1000);
+	}
+#elif (PLATFORM == PLATFORM_WIN32)
+	inline void delay(uint16_t ms)
+	{
+		Sleep(ms);
+	}
 #endif
 
 void callproc(void *params)

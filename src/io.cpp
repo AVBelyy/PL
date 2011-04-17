@@ -39,7 +39,25 @@
 	}
 #elif (PLATFORM == PLATFORM_WIN32)
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
+	#if (IO_KEYBOARD_SUPPORT)
+		HANDLE hStdIn  = GetStdHandle(STD_INPUT_HANDLE);
+		DWORD consoleMode;
+	
+		char getch()
+		{
+			TCHAR ch = 0;
+			DWORD count;
+			SetConsoleMode(hStdIn, 0);       
+			ReadConsole(hStdIn, &ch, sizeof(TCHAR), &count, NULL);
+			SetConsoleMode(hStdIn, consoleMode);
+			if(ch == 3) // Ctrl-C
+			{
+				sigexec(KERNEL_ATCTRLC, NULL);
+				exit(1);
+			}
+			return (char)ch;
+		}
+	#endif
 	void clrscr()
 	{
 		COORD coord = {0, 0};
@@ -193,18 +211,26 @@ void IO::interrupt(process *p)
 
 void IO::atexit(void *params)
 {
-	#if (PLATFORM == PLATFORM_UNIX) && (IO_KEYBOARD_SUPPORT)
-        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	#if (IO_KEYBOARD_SUPPORT)
+		#if (PLATFORM == PLATFORM_UNIX)
+			tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+		#elif (PLATFORM == PLATFORM_WIN32)
+			SetConsoleMode(hStdIn, consoleMode);
+		#endif
 	#endif
 }
 
 IO::IO()
 {
 	for(int i = 0; i < IO_MAXFILES; i++) files[i] = (FILE*)malloc(sizeof(FILE*));
-	// On UNIX save current terminal info
-	#if (PLATFORM == PLATFORM_UNIX) && (IO_KEYBOARD_SUPPORT)
-		tcgetattr(STDIN_FILENO, &oldt);
-		kernel_signal(KERNEL_ATEXIT | KERNEL_ATCTRLC, &atexit, NULL);
+	// On UNIX & Win32 save current console info
+	#if (IO_KEYBOARD_SUPPORT)
+		#if (PLATFORM == PLATFORM_UNIX)
+			tcgetattr(STDIN_FILENO, &oldt);
+		#elif (PLATFORM == PLATFORM_WIN32)
+			GetConsoleMode(hStdIn, &consoleMode);
+		#endif
+			kernel_signal(KERNEL_ATEXIT | KERNEL_ATCTRLC, &atexit, NULL);
 	#endif
 	// Disable buffering
 	#if (PLATFORM == PLATFORM_WIN32) || (PLATFORM == PLATFORM_UNIX)
