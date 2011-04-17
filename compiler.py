@@ -339,7 +339,7 @@ def parse(ln):
 				buf.append(getcmd(tokens[0]))
 				buf.append(operand["value"])
 				sectionLength[curSection] += 2
-			if tokens[0] in ("add", "sub", "mul", "div", "xor", "or", "and", "shl", "shr", "mod"): #1 - register, 2 - any data
+			elif tokens[0] in ("add", "sub", "mul", "div", "xor", "or", "and", "shl", "shr", "mod"): #1 - register, 2 - any data
  				buf.append(sectionLength[curSection]) # information for bin writer - command offset
 				buf.append(getcmd(tokens[0]))
 				operand = getop(tokens[1])
@@ -351,7 +351,7 @@ def parse(ln):
 				buf.append(operand["value"] >> 8)
 				buf.append(operand["value"] & 0xff)	
 				sectionLength[curSection] += 5
-			if tokens[0] in ("mov", "movf"): #1 and 2 - any data
+			elif tokens[0] in ("mov", "movf"): #1 and 2 - any data
 				buf.append(sectionLength[curSection]) # information for bin writer - command offset
 				buf.append(getcmd(tokens[0]))
 				for x in (1, 2):
@@ -361,7 +361,7 @@ def parse(ln):
 					buf.append(operand["value"] >> 8)
 					buf.append(operand["value"] & 0xff)
 				sectionLength[curSection] += 7
-			if tokens[0] in ("push", "int"): #1 - any data
+			elif tokens[0] in ("push", "int"): #1 - any data
 				buf.append(sectionLength[curSection]) # information for bin writer - command offset
 				buf.append(getcmd(tokens[0]))
 				operand = getop(tokens[1])	
@@ -370,7 +370,7 @@ def parse(ln):
 				buf.append(operand["value"] >> 8)
 				buf.append(operand["value"] & 0xff)
 				sectionLength[curSection] += 4
-			if tokens[0] == "call": # (1 - procedure ptr) OR (1 and 2 - any data)
+			elif tokens[0] == "call": # (1 - procedure ptr) OR (1 and 2 - any data)
 				try:
 					lib, proc = ln[:ln.index("(", 4)][4:].strip().split("::")
 					lib_op, proc_op = getop(lib), getop('"%s"' % proc)
@@ -394,9 +394,9 @@ def parse(ln):
 					buf.append(operand["id"] >> 8)
 					buf.append(operand["id"] & 0xff)
 					sectionLength[curSection] += 3				
-			if tokens[0] == "label":
+			elif tokens[0] == "label":
 				labelTable.append({"name": tokens[1], "section": curSection, "offset": sectionLength[curSection]})
-			if tokens[0] == "if":
+			elif tokens[0] == "if":
 				cond = parsecond(ln[ln.index("(") + 1:ln.index(")")])
 				cmd = ln[ln.index(")")+1:].strip()
 				buf.append(sectionLength[curSection]) # information for bin writer - command offset
@@ -412,16 +412,16 @@ def parse(ln):
 				sections[curSection].append(buf)
 				parse(cmd)
 				buf = []
-			if tokens[0] == "goto":
+			elif tokens[0] == "goto":
 				buf.append(sectionLength[curSection])
 				buf.append(getcmd(tokens[0]))
 				buf.append(tokens[1])
 				sectionLength[curSection] += 3
-			if tokens[0] in ("ret", "nop"):
+			elif tokens[0] in ("ret", "nop"):
 				buf.append(sectionLength[curSection])
 				buf.append(getcmd(tokens[0]))
 				sectionLength[curSection] += 1
-			if tokens[0] == "pid":
+			elif tokens[0] == "pid":
 				buf.append(sectionLength[curSection])
 				buf.append(getcmd(tokens[0]))
 				operand = getop(tokens[1])
@@ -432,6 +432,8 @@ def parse(ln):
 				buf.append(operand["value"] >> 8)
 				buf.append(operand["value"] & 0xff)
 				sectionLength[curSection] += 4
+			elif ln[0] != "#": # comment
+				raise CompileError, "unknown command: '%s'" % ln
 		elif curSection == "static":
 			tokens = re.split("\\s+", ln, 2)
 			if tokens[0].lower() == "ends":

@@ -198,6 +198,40 @@ feof:
 	push 9
 	int 0x05
 	ret
+fflush:
+	mov r2 r0
+	push 9
+	push 10
+	int 0x05
+	ret
+ftell:
+	mov r2 r0
+	push 9
+	push 11
+	int 0x05
+	ret
+rewind:
+	mov r4 r0
+	push 9
+	push 4
+	push 0
+	push r4
+	push SEEK_SET
+	int 0x05
+	ret
+remove:
+	mov r2 r0
+	push 9
+	push 12
+	int 0x05
+	ret
+rename:
+	mov r3 r1
+	mov r2 r0
+	push 9
+	push 13
+	int 0x05
+	ret
 malloc:
 	#	R0		- size in bytes
 	#	(int)R1	- loop counter
@@ -228,7 +262,7 @@ malloc:
 free:
 	#	R0		- ptr
 	#	(int)R1	- loop counter
-	if(r0==NULL) ret
+	if (r0==NULL) ret
 	dec r0
 	mov r1 &r0
 	if (r1==0) ret
@@ -260,8 +294,8 @@ export:
 	delay, random, signal
 	hidecursor, showcursor
 	clrscr, gotoxy, ttysize
-	fopen, fgetc, fsize, fseek, fputc, fputs
-	fgets, fclose, feof
+	fopen, fgetc, fsize, fseek, fputc, fputs, fgets
+	fclose, feof, fflush, ftell, rewind, rename, remove
 	putc, puts
 	getc, getcne, gets
 	itoa, atoi

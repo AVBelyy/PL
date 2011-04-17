@@ -1,15 +1,14 @@
 #include <libstd.inc>
 
 const:
-	MEM_SIZE	40000
+	MEM_SIZE	30000
 header:
 	heap = MEM_SIZE	
 import:
 	from "libstd.def"
-		malloc
-		strlen, putc, getc
-		fopen, fgetc, fsize, fseek
-		signal, showcursor
+		putc, getc
+		fopen, fgetc, fseek
+		itoa, puts
 code:
 	# R5 - current command
 	# R6 - file descriptor

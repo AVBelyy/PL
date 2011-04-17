@@ -205,6 +205,21 @@ void IO::interrupt(process *p)
 		{
 			FILE *f = IO::searchFile(p->regs[2]);
 			p->regs[0] = feof(f);
+		} else if(p->regs[1] == 10) // int fflush(fd)
+		{
+			FILE *f = IO::searchFile(p->regs[2]);
+			if((p->regs[0] = fflush(f)) == EOF)
+				p->regs[0] = 0x100;
+		} else if(p->regs[1] == 11) // int ftell(fd)
+		{
+			FILE *f = IO::searchFile(p->regs[2]);
+			p->regs[0] = ftell(f);
+		} else if(p->regs[1] == 12) // int remove(char*)
+		{
+			p->regs[0] = remove((char*)(p->mem + p->regs[2]));
+		} else if(p->regs[1] == 13) // int rename(char*, char*)
+		{
+			p->regs[0] = rename((char*)(p->mem + p->regs[2]), (char*)(p->mem + p->regs[3]));
 		}
 	}
 }
