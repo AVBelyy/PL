@@ -8,7 +8,8 @@ const:
 
 	KERNEL_ATEXIT		1
 	KERNEL_ATCTRLC		2
-	KERNEL_NEWPROCESS	4
+	KERNEL_STARTPROCESS	4
+	KERNEL_EXITPROCESS	8
 static:
 	process struct
 		pid     int

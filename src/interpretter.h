@@ -22,7 +22,8 @@
 #define MAX_ENTRIES			16
 
 // Signal types
-#define KERNEL_NEWPROCESS	4
+#define KERNEL_STARTPROCESS	4
+#define KERNEL_EXITPROCESS	8
 
 // Constants
 #define OP_CONST			0

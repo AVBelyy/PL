@@ -106,7 +106,7 @@ process::process(char *path)
 	// insert process in process list
 	plist[pcount++] = this;
 	// exec signal
-	sigexec(KERNEL_NEWPROCESS, (void*)this);
+	sigexec(KERNEL_STARTPROCESS, (void*)this);
 }
 uint16_t process::fgetint() {
 	FILE *file = (FILE*)owner->f;
@@ -168,7 +168,11 @@ void process::__call(uint16_t addr)
 bool process::exec() {
 	FILE *file = (FILE*)owner->f;
 	uint8_t cmd = fgetc(file);
-	if(feof(file)) return false;
+	if(feof(file))
+	{
+		sigexec(KERNEL_EXITPROCESS, (void*)this);
+		return false;
+	}
 	switch(cmd)
 	{
 	#ifdef __DEBUG__
