@@ -40,7 +40,7 @@ opcodes = (
 
 curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "static": 0}, {"code": [], "static": []}
 reservedSections = ("header", "static", "const", "export", "code")
-header = {"name": "", "library": False, "heapSize": 0}
+header = {"name": "", "library": False}
 varTable, constTable, labelTable, procTable = [], [], [], []
 structTable, structPtr = [], -1
 exportTable, curLibrary = [], ""
@@ -114,8 +114,6 @@ def getop(op):
 	operand = {"flags": 0, "value": 0}
 	op = op.strip()
 	if not op: return operand
-	# special values
-	if op == "HEAP_SIZE": return {"flags": 4, "value": 10}
 	for x in constTable:
 		if x[0] == op.lower(): return getop(x[1])
 	try:
@@ -137,7 +135,7 @@ def getop(op):
 		sectionLength["static"] += len(op)
 		sections["static"].append(op)
 		constStrCounter += 1
-		return {"flags": 0, "value": header["heapSize"] + sectionLength["static"] - len(op)}
+		return {"flags": 0, "value": sectionLength["static"] - len(op)}
 	# ...or const char?
 	if op[0] == op[-1] == "'": return {"flags": 0, "value": getcint(op)}
 	# i think it's member of struct
@@ -147,7 +145,7 @@ def getop(op):
 			# search structure members
 			info = [(s["sname"], s["start"]) for s in varTable if s["name"] == struct.lower()][0]
 			members = [s for s in structTable if s["name"] == info[0].lower()][0]["members"]
-			offset = header["heapSize"]
+			offset = 0
 			for m in members: 
 				if m[0] == member: 	
 					return {"flags": 2 if m[1] == "int" else 1, "value": info[1] + offset}
@@ -160,7 +158,7 @@ def getop(op):
 	for x in varTable:
 		if x["name"] == op:
 			if x["type"] == "int" and operand["flags"]: operand["flags"] = 2
-			operand["value"] = header["heapSize"] + x["start"]
+			operand["value"] = x["start"]
 			return operand
 	try:
 		operand["value"] = getcint(op)
@@ -320,8 +318,6 @@ def parse(ln):
 					if "static" in cmd and getcint(arg) == None:
 						raise CompileError, "static library must have PID"
 					header["library"] = {"static": "static" in cmd, "pid": "static" in cmd and getop(arg)["value"] or 0}
-				if "heap" in cmd:
-					header["heapSize"] = getop(arg)["value"]
 		elif curSection == "const":
 			const = re.split("\\s+", ln, 1)
 			if const[0].lower() not in [c[0] for c in constTable]:
@@ -492,6 +488,7 @@ def parse(ln):
 			vars = ln.split(",")
 			for x in vars:
 				var = x.strip().split("as")
+				if not var[0]: continue
 				info = varinfo(var[0].strip())
 				if info["type"] != "procedure":
 					raise CompileError, "only procedures can be exported"
@@ -550,10 +547,10 @@ localProcTable = [x for x in procTable if not x["global"]]
 exportProcs = [x["name"] for x in exportTable]
 if header["library"] and not header["library"]["static"]:
 	# if dynamic library
-	entryPoint = len(header["name"]) + len("" if not exportProcs else reduce(lambda x, y: x + y, (x["name"] for x in localProcTable if x["name"] in exportProcs))) + len(localProcTable) * 4 + staticSize + 9
+	entryPoint = len(header["name"]) + len("" if not exportProcs else reduce(lambda x, y: x + y, (x["name"] for x in localProcTable if x["name"] in exportProcs))) + len(localProcTable) * 4 + staticSize + 7
 else:
 	# if static library or application
-	entryPoint = len(header["name"]) + len(localProcTable) * 4 + staticSize + 9
+	entryPoint = len(header["name"]) + len(localProcTable) * 4 + staticSize + 7
 # write function table
 o.write(chr(len(localProcTable)))
 if header["library"]:
@@ -578,9 +575,7 @@ for x in localProcTable:
 	o.write(chr(entryPoint >> 8) + chr(entryPoint & 0xff))
 	entryPoint += sectionLength[x["name"]]
 if not len(sections["code"]): entryPoint = 0
-heapSize = header["heapSize"]
 o.write(chr(entryPoint >> 8) + chr(entryPoint & 0xff))
-o.write(chr(heapSize   >> 8) + chr(heapSize   & 0xff)) 
 o.write(chr(staticSize >> 8) + chr(staticSize & 0xff))
 #secondly write DATA section
 for x in sections["static"]: o.write(x)

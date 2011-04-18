@@ -2,8 +2,7 @@
 
 const:
 	MEM_SIZE	30000
-header:
-	heap = MEM_SIZE	
+static:
 code:
 	# R5 - current command
 	# R6 - file descriptor
@@ -12,6 +11,9 @@ code:
 	# R9 - entry level
 	call fopen("program.bf" "rb")
 	mov r6 r0
+	call malloc(MEM_SIZE)
+	mov r7 r0
+	if ( r7 == NULL ) goto heap_error
 	label exec
 		call fgetc( r6 )
 		if ( r0 == EOF ) goto end
@@ -29,26 +31,34 @@ code:
 
 	# --- begin subroutines ---
 	label printchar
-		call putc( &r7 )
+		call heapbyte( r7 )
+		call putc()
 	goto finally
 	label inc_cell
-		mov r0 &r7
+		call heapbyte( r7 )
 		inc r0
 		mod r0 0xFF
-		mov &r7 r0
+		mov r1 r0
+		push r7
+		call heapbyteset()
 	goto finally
 	label dec_cell
-		mov r0 &r7
+		call heapbyte( r7 )
 		dec r0
 		mod r0 0xFF
-		mov &r7 r0
+		mov r1 r0
+		push r7
+		call heapbyteset()
 	goto finally
 	label getchar
 		call getc()
-		mov &r7 r0
+		mov r1 r0
+		push r7
+		call heapbyteset()
 	goto finally
 	label while
-		if ( &r7 != 0 ) goto finally
+		call heapbyte( r7 )
+		if ( r0 != 0 ) goto finally
 		inc r9
 		label strip
 			if ( r9 == 0 ) goto finally_while
@@ -60,7 +70,8 @@ code:
 		label finally_while
 	goto finally
 	label endwhile
-		if ( &r7 == 0 ) goto finally
+		call heapbyte( r7 )
+		if ( r0 == 0 ) goto finally
 		dec r9
 		label end_strip
 			if ( r9 == 0 ) goto finally_endwhile
@@ -73,6 +84,8 @@ code:
 		label finally_endwhile
 		dec r8
 	goto finally
+	label heap_error
+		call puts("error initializing heap\n")
 	# --- end subroutines ---
 
 	label end

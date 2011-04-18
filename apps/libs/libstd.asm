@@ -129,7 +129,7 @@ gets:
 	int 0x01
 	if (r0 == 1) ret
 	if (r0 == 3) ret
-	call putc( '\n' )
+	call putc('\n')
 	ret
 ttysize:
 	push 6
@@ -242,63 +242,54 @@ rename:
 	int 0x05
 	ret
 malloc:
-	#	R0		- size in bytes
-	#	(int)R1	- loop counter
-	#	(int)R2	- max block size
-	if (r0>=256) goto fail
-	xor r1 r1
-	xor r2 r2
-	label loop
-	if (&r1==0) goto then
-	xor r2 r2
-	add r1 &r1
-	goto endif
-	label then
-	inc r2
-	label endif
-	inc r1
-	if (r0!=r2) goto continue
-	sub r1 r2
-	mov &r1 r0
-	inc r1
-	push r1
-	ret
-	label continue
-	if (r1!=HEAP_SIZE) goto loop
-	label fail
-	push NULL
+	mov r1 r0
+	push 1
+	int 0x02
 	ret
 free:
-	#	R0		- ptr
-	#	(int)R1	- loop counter
-	if (r0==NULL) ret
-	dec r0
-	mov r1 &r0
-	if (r1==0) ret
-	label loop
-	inc r0
-	dec r1
-	mov &r0 0
-	if (r1) goto loop
+	mov r1 r0
+	push 2
+	int 0x02
 	ret
-realloc:
-	#	R0		- ptr
-	#	R1		- new size
+heapbyte:
+	mov r1 r0
+	push 3
+	int 0x02
+	ret
+heapint:
+	mov r1 r0
+	push 4
+	int 0x02
+	ret
+heaptostatic:
 	mov r2 r1
-	call free()
-	call malloc(r2)
+	mov r1 r0
+	push 5
+	int 0x02
 	ret
-memset:
-	#	R0		- ptr
-	#	R1		- value to be set
-	#	R2		- number of bytes
-	mod r1 0xFF
-	label loop
-		if (r2 == 0) ret
-		mov &r0 r1
-		inc r0
-		dec r2
-	goto loop
+heapfromstatic:
+	mov r2 r1
+	mov r1 r0
+	push 6
+	int 0x02
+	ret
+heapsz:
+	mov r1 r0
+	push 7
+	int 0x02
+	ret
+heapbyteset:
+	mov r2 r1
+	mov r1 r0
+	push 8
+	int 0x02
+	ret
+heapintset:
+	mov r2 r1
+	mov r1 r0
+	push 9
+	int 0x02
+	ret
 export:
 	delay, random, signal, time, localtime
 	hidecursor, showcursor
@@ -309,4 +300,5 @@ export:
 	getc, getcne, gets
 	itoa, atoi
 	strcpy, strlen
-	malloc, realloc, free, memset
+	malloc, free, heapbyte, heapint, heaptostatic
+	heapfromstatic, heapsz, heapbyteset, heapintset

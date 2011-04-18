@@ -64,18 +64,15 @@ process::process(char *path)
 		}
 	}
 	uint16_t entryPoint = fgetint();
-	header.heap_size = fgetint();
 	header.static_size = fgetint();
 	memset(regs, 0, 10 * sizeof(uint32_t));
 	memset(entries, 0, 10 * sizeof(p_entry));
 	stackPointer = 0;
 	resultFlag = true;
 	lockFlag = false;
-	mem = (uint8_t*)malloc(header.heap_size + header.static_size);
-	// initialize heap
-	memset(mem, 0, header.heap_size);
+	mem = (uint8_t*)malloc(header.static_size);
 	// read STATIC section
-	for(i = header.heap_size; i < header.heap_size + header.static_size; i++) mem[i] = fgetc((FILE*)f);
+	for(i = 0; i < header.static_size; i++) mem[i] = fgetc((FILE*)f);
 	breakLevel = 0;
 	entries[entryLevel = 0].p = this;
 	entries[0].offset = entries[0].start = entryPoint;
@@ -118,11 +115,7 @@ p_operand process::getop(bool ReturnPtr) {
 	op.value = fgetint();
 	if(op.type == OP_CHAR) op.value = mem[op.value];
 	else if(op.type == OP_INT && !ReturnPtr) op.value = (mem[op.value] << 8) + mem[op.value+1];
-	else if(op.type == OP_REG && !ReturnPtr) 
-		if(op.value == 10)
-			op.value = header.heap_size;
-		else
-			op.value = regs[op.value];
+	else if(op.type == OP_REG && !ReturnPtr) op.value = regs[op.value];
 	else if(op.type == OP_REGPTR)
 		if(ReturnPtr) op.value = regs[op.value];
 		else op.value = mem[regs[op.value]];

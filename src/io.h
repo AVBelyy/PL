@@ -4,11 +4,11 @@
 #include <kernel.h>
 #include <interpretter.h>
 
-//
-//		stdio settings
-//
+/*
+	stdio settings
+*/
 
-#define IO_KEYBOARD_SUPPORT			1
+#define IO_KEYBOARD_SUPPORT
 #define IO_MAXFILES					32
 
 // Disable ncurses's getch()
@@ -16,13 +16,13 @@
 	#undef getch()
 #endif
 
-//
-//		Platform-dependent functions
-//
+/*
+	Platform-dependent functions
+*/
 
 #if (PLATFORM == PLATFORM_UNIX)
 	#define EOL_SYMBOL		0x0A
-	// In Linux: simulating getch() function from conio.h
+	// In Linux: simulating getch() function
 
 	#include <sys/ioctl.h>
 	#include <stdio.h>
@@ -32,8 +32,6 @@
 	char getch();
 #elif (PLATFORM == PLATFORM_WIN32)
 	#define EOL_SYMBOL		0x0D
-
-	// In Windows: include conio.h with getch() function
 
 	#include <stdio.h>
 #elif (PLATFORM == PLATFORM_AVR)
@@ -62,7 +60,8 @@ uint16_t ttysize();
 void hidecursor();
 void showcursor();
 
- class IO {
+class IO
+{
 	public:
 	static FILE **files;
 	static int filesCount;

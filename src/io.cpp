@@ -2,7 +2,7 @@
 
 // Platform-dependent functions
 #if (PLATFORM == PLATFORM_UNIX)
-	#if (IO_KEYBOARD_SUPPORT)
+	#if defined(IO_KEYBOARD_SUPPORT)
 		struct termios oldt;
 		char getch()
 		{
@@ -39,7 +39,7 @@
 	}
 #elif (PLATFORM == PLATFORM_WIN32)
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	#if (IO_KEYBOARD_SUPPORT)
+	#if defined(IO_KEYBOARD_SUPPORT)
 		HANDLE hStdIn  = GetStdHandle(STD_INPUT_HANDLE);
 		DWORD consoleMode;
 	
@@ -133,7 +133,7 @@ void IO::interrupt(process *p)
 	else if(p->regs[0] == 4) fputs((char*)(p->mem + p->regs[1]), stdout);
 	else if(p->regs[0] == 5)
 	{
-		#if (IO_KEYBOARD_SUPPORT)
+		#if defined(IO_KEYBOARD_SUPPORT)
 			if(p->regs[1] == 1) p->regs[0] = 1;
 			else if(p->regs[1] == 2)
 			{
@@ -226,7 +226,7 @@ void IO::interrupt(process *p)
 
 void IO::atexit(void *params)
 {
-	#if (IO_KEYBOARD_SUPPORT)
+	#if defined(IO_KEYBOARD_SUPPORT)
 		#if (PLATFORM == PLATFORM_UNIX)
 			tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 		#elif (PLATFORM == PLATFORM_WIN32)
@@ -239,7 +239,7 @@ IO::IO()
 {
 	for(int i = 0; i < IO_MAXFILES; i++) files[i] = (FILE*)malloc(sizeof(FILE*));
 	// On UNIX & Win32 save current console info
-	#if (IO_KEYBOARD_SUPPORT)
+	#if defined(IO_KEYBOARD_SUPPORT)
 		#if (PLATFORM == PLATFORM_UNIX)
 			tcgetattr(STDIN_FILENO, &oldt);
 		#elif (PLATFORM == PLATFORM_WIN32)
