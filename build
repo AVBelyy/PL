@@ -12,10 +12,15 @@ apps()
 {
 	if [ -d apps ]; then
 		printf " = Apps =\n"
-		for app in apps/*.asm; do	
+		if [ -d apps/libs ]; then
+			libs=apps/libs/*.asm
+		else
+			libs=
+		fi
+		for app in $libs apps/*.asm; do	
 			name=$(echo $app | cut -d'.' -f1)
 			printf "Compiling `basename $app`.. "
-			python compiler.py $name -Iinclude >/dev/null 2>build.err
+			python compiler.py $name -lstd -Iinclude >/dev/null 2>build.err
 			if [ "$?" -eq 0 ]; then
 				echo OK
 			else
@@ -67,33 +72,35 @@ if [ -n "$halname" ]; then
 	fi
 fi
 
-printf " = Libraries =\n"
-for dirs in lib/*$target*; do
-	if [ -d $dirs ]; then
-		for name in $dirs/*/*.cpp; do
-			printf "Compiling $name.. "
-			linker=`dirname $name`'/linker.opt'
-			if [ -f $linker ]; then
-				ldflags+=`cat $linker`" "
-			fi
-			compiler=`dirname $name`'/compiler.opt'
-			if [ -f $compiler ]; then
-				compilerOpts=`cat $compiler`
-			else
-				compilerOpts=
-			fi
-			$cc -c $name -w -Isrc -Os -Ilib -DPLATFORM=$platform $cflags $compilerOpts >/dev/null 2>build.err
-			if [ "$?" -eq 0 ]; then
-				echo OK
-			else
-				echo ERROR
-				exit 1
-			fi
-		done
-		for name in $dirs/*/*.h; do inc=$inc'-include '$name' '; done
-	fi
-done
-echo
+if [ -d lib ]; then
+	printf " = Libraries =\n"
+	for dirs in lib/*$target*; do
+		if [ -d $dirs ]; then
+			for name in $dirs/*/*.cpp; do
+				printf "Compiling $name.. "
+				linker=`dirname $name`'/linker.opt'
+				if [ -f $linker ]; then
+					ldflags+=`cat $linker`" "
+				fi
+				compiler=`dirname $name`'/compiler.opt'
+				if [ -f $compiler ]; then
+					compilerOpts=`cat $compiler`
+				else
+					compilerOpts=
+				fi
+				$cc -c $name -w -Isrc -Os -Ilib -DPLATFORM=$platform $cflags $compilerOpts >/dev/null 2>build.err
+				if [ "$?" -eq 0 ]; then
+					echo OK
+				else
+					echo ERROR
+					exit 1
+				fi
+			done
+			for name in $dirs/*/*.h; do inc=$inc'-include '$name' '; done
+		fi
+	done
+	echo
+fi
 
 printf "Compiling kernel.. "
 $cc -c src/io.cpp src/interpretter.cpp src/kernel.cpp -w -Os -Isrc -Ihal/$halname $inc -DPLATFORM=$platform $cflags >/dev/null 2>build.err

@@ -4,11 +4,6 @@ const:
 	MEM_SIZE	30000
 header:
 	heap = MEM_SIZE	
-import:
-	from "libstd.def"
-		putc, getc
-		fopen, fgetc, fseek
-		itoa, puts
 code:
 	# R5 - current command
 	# R6 - file descriptor

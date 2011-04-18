@@ -39,15 +39,15 @@ opcodes = (
 )
 
 curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "static": 0}, {"code": [], "static": []}
-reservedSections = ("header", "static", "const", "import", "export", "code")
+reservedSections = ("header", "static", "const", "export", "code")
 header = {"name": "", "library": False, "heapSize": 0}
 varTable, constTable, labelTable, procTable = [], [], [], []
 structTable, structPtr = [], -1
-exportTable, importTable, curLibrary = [], [], ""
+exportTable, curLibrary = [], ""
 includes, incLevel = [], 0
 ifs, ifsLevel = [True], 0
 constStrCounter = 0
-path, outpath = environ["PATH"].split(pathsep), ""
+path, outpath = environ["PATH"].split(pathsep) + ["."], ""
 
 class CompileError(Exception):
 	def __init__(self, value):
@@ -486,38 +486,6 @@ def parse(ln):
 			else:
 				raise TypeError, "variable '%s' declared with undefined type '%s'" % (varname, vartype)
 			if buf: varTable.append(variable);
-		elif curSection == "import":
-			cmds = ln.split(",")
-			for x in cmds:
-				cmd = re.split("\\s+", x, 2)
-				if not cmd[0]: del cmd[0]
-				if cmd[0].lower() == "from":
-					filename = ln[4:].strip()
-					if filename[0] == filename[-1] == '"': filename = filename[1:-1]
-					# include definitions from file
-					try:	o = open(filename, "rb")
-					except:
-						raise IOError,"can't open file '%s'" % filename
-					lib_byte = ord(o.read(1))
-					name = o.read(lib_byte & 0x1f)
-					curLibrary = name
-					for x in xrange(ord(o.read(1))):	
-						varid = o.read(2)
-						varid = (ord(varid[0]) << 8) + ord(varid[1])
-						varname = o.read(ord(o.read(1)))
-						importTable.append({"library": name, "id": varid, "name": varname})
-				else:
-					# search variable in import table
-					libname, varname = curLibrary, cmd[0]
-					for x in importTable:
-						if x["library"] + x["name"] == libname + varname:
-							try:
-								concat = ""
-								for y in cmd: concat += y + " "
-								concat = concat.split("as")
-								if concat[1]: varname = concat[1].strip()
-							except: pass
-							procTable.append({"global": True, "name": varname, "id": x["id"]})
 		elif curSection == "export":
 			if not header["library"]:
 				raise CompileError, "application can't have 'export' section"
@@ -539,6 +507,19 @@ for arg in argv[1:]:
 		outpath = arg
 	elif arg[:2] == "-I":
 		path += [abspath(p) for p in arg[2:].split(pathsep)]
+	elif arg[:2] == "-l" and "lib"+ arg[2:] != basename(outpath):
+		try:
+			lib = open(search_file("lib" + arg[2:] + ".def", path), "rb")
+		except:
+			raise IOError, "can't load library '%s'" % arg[2:]
+		# read procedure list from library
+		lib_byte = ord(lib.read(1))
+		name = lib.read(lib_byte & 0x1f)
+		for x in xrange(ord(lib.read(1))):
+			varid = (ord(lib.read(1)) << 8) + ord(lib.read(1))
+			varname = lib.read(ord(lib.read(1)))
+			procTable.append({"global": True, "name": varname, "id": varid})
+		
 if outpath == "":
 	raise CompileError, "no input files"
 
@@ -645,4 +626,4 @@ if header["library"] and header["library"]["static"]:
 		o.write(chr(len(x["name"])) + x["name"])
 	o.close()
 
-print "%s.asm: successfully compiled (%i bytes, %f is)" % (outpath, getsize(basename(outpath) + ".bin"), time() - start)
+print "%s.asm: successfully compiled (%i bytes, %f ms)" % (outpath, getsize(basename(outpath) + ".bin"), time() - start)

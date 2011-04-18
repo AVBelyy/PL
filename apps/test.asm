@@ -2,10 +2,6 @@
 
 header:
 	name = test
-import:
-	from "libstd.def"
-		fopen, fgetc, feof, puts, ttysize, clrscr, gotoxy, putc, delay, showcursor, hidecursor, signal
-
 atexit:
 	call clrscr()
 	call showcursor()

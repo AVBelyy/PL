@@ -18,6 +18,15 @@ signal:
 	push 4
 	int 0x01
 	ret
+time:
+	push 5
+	int 0x01
+	ret
+localtime:
+	mov r1 r0
+	push 6
+	int 0x01
+	ret
 strcpy:
 	label loop
 		mov &r0 &r1
@@ -291,7 +300,7 @@ memset:
 		dec r2
 	goto loop
 export:
-	delay, random, signal
+	delay, random, signal, time, localtime
 	hidecursor, showcursor
 	clrscr, gotoxy, ttysize
 	fopen, fgetc, fsize, fseek, fputc, fputs, fgets
@@ -300,5 +309,4 @@ export:
 	getc, getcne, gets
 	itoa, atoi
 	strcpy, strlen
-	malloc, realloc, free
-	memset
+	malloc, realloc, free, memset

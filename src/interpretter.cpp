@@ -317,15 +317,35 @@ bool process::exec() {
 		switch(num.value) {
 		case 0x01: // INT 0x01
 		{
-			if(regs[0] == 1)		regs[0] = PLATFORM;
-			else if(regs[0] == 2)	delay(regs[1]);
-			else if(regs[0] == 3)	regs[0] = rand() % 0x8000;
-			else if(regs[0] == 4)
+			if(regs[0] == 1)		regs[0] = PLATFORM; // get platform
+			else if(regs[0] == 2)	delay(regs[1]); // delay
+			else if(regs[0] == 3)	regs[0] = rand() % 0x8000; // random
+			else if(regs[0] == 4)	// signal
 			{
 				callproc_t sig;
 				sig.p = this;
 				sig.procid = regs[2];
 				kernel_signal(regs[1], &callproc, (void*)&sig);
+			}
+			else if(regs[0] == 5)	regs[0] = (unsigned)time(NULL); // UNIX time
+			else if(regs[0] == 6)	// local time
+			{
+				time_t unixtime;
+				time(&unixtime);
+				struct tm *t = localtime(&unixtime);
+				char timedata[] =
+				{
+					t->tm_sec >> 8, t->tm_sec & 0xFF,
+					t->tm_min >> 8, t->tm_min & 0xFF,
+					t->tm_hour >> 8, t->tm_hour & 0xFF,
+					t->tm_mday >> 8, t->tm_mday & 0xFF,
+					t->tm_mon >> 8, t->tm_mon & 0xFF,
+					t->tm_year >> 8, t->tm_year & 0xFF,
+					t->tm_wday >> 8, t->tm_wday & 0xFF,
+					t->tm_yday >> 8, t->tm_yday & 0xFF,
+					t->tm_isdst >> 8, t->tm_isdst & 0xFF
+				};
+				memcpy((void*)(mem + regs[1]), (void*)timedata, sizeof(timedata));
 			}
 			break;
 		}
