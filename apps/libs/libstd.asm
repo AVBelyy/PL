@@ -278,16 +278,22 @@ heapsz:
 	push 7
 	int 0x02
 	ret
-heapbyteset:
+staticsz:
 	mov r2 r1
 	mov r1 r0
 	push 8
 	int 0x02
 	ret
-heapintset:
+heapbyteset:
 	mov r2 r1
 	mov r1 r0
 	push 9
+	int 0x02
+	ret
+heapintset:
+	mov r2 r1
+	mov r1 r0
+	push 10
 	int 0x02
 	ret
 export:
@@ -301,4 +307,4 @@ export:
 	itoa, atoi
 	strcpy, strlen
 	malloc, free, heapbyte, heapint, heaptostatic
-	heapfromstatic, heapsz, heapbyteset, heapintset
+	heapfromstatic, heapsz, staticsz, heapbyteset, heapintset

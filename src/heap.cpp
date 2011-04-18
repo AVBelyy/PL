@@ -66,18 +66,24 @@ void Heap::interrupt(process *p)
 		memcpy((void*)(heap + heap_ptr), (void*)(p->mem + static_ptr), count);
 	} else if(p->regs[0] == 7) // heapsz(static_ptr)
 	{
-			uint16_t static_ptr = p->regs[1];
-			uint16_t len =strlen((char*)(p->mem + static_ptr));
-			p->regs[0] = 1; p->regs[1] = len;
-			interrupt(p);
-			if(!p->regs[0]) return;
-			strcpy((char*)(heap + p->regs[0]), (char*)(p->mem + static_ptr));
-	} else if(p->regs[0] == 8) // heapbyteset(ptr byte)
+		uint16_t static_ptr = p->regs[1];
+		uint16_t len =strlen((char*)(p->mem + static_ptr));
+		p->regs[0] = 1; p->regs[1] = len;
+		interrupt(p);
+		if(!p->regs[0]) return;
+		strcpy((char*)(heap + p->regs[0]), (char*)(p->mem + static_ptr));
+	} else if(p->regs[0] == 8) // staticsz(static_ptr heap_ptr)
+	{
+		uint16_t static_ptr = p->regs[1];
+		uint16_t heap_ptr = p->regs[2];
+		if(heap_ptr < 2 || heap_ptr > HEAP_SIZE - 1) return;
+		strcpy((char*)(p->mem + static_ptr), (char*)(heap + heap_ptr));
+	} else if(p->regs[0] == 9) // heapbyteset(ptr byte)
 	{
 		uint16_t ptr = p->regs[1];
 		if(ptr < 2 || ptr > HEAP_SIZE - 1) return;
 		heap[ptr] = p->regs[2] & 0xFF;
-	} else if(p->regs[0] == 9) // heapintset(ptr int)
+	} else if(p->regs[0] == 10) // heapintset(ptr int)
 	{
 		uint16_t ptr = p->regs[1];
 		if(ptr < 2 || ptr > HEAP_SIZE - 2) return;
