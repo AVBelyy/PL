@@ -130,7 +130,7 @@ void IO::interrupt(process *p)
 	if(p->regs[0] == 1) clrscr();
 	else if(p->regs[0] == 2) gotoxy(p->regs[1] >> 8, p->regs[1] & 0xFF);
 	else if(p->regs[0] == 3) putchar(p->regs[1]);
-	else if(p->regs[0] == 4) fputs((char*)(p->mem + p->regs[1]), stdout);
+	else if(p->regs[0] == 4) fputs((char*)(heap + p->regs[1]), stdout);
 	else if(p->regs[0] == 5)
 	{
 		#if defined(IO_KEYBOARD_SUPPORT)
@@ -157,7 +157,7 @@ void IO::interrupt(process *p)
 			p->regs[0] = 0;
 			if(filesCount == IO_MAXFILES)
 				return;
-			files[filesCount] = fopen((char*)(p->mem + p->regs[2]), (char*)(p->mem + p->regs[3]));
+			files[filesCount] = fopen((char*)(heap + p->regs[2]), (char*)(heap + p->regs[3]));
 			if(files[filesCount] != NULL)
 				p->regs[0] = fileno(files[filesCount++]);
 		} else if(p->regs[1] == 2) // char fgetc(fd)
@@ -189,13 +189,13 @@ void IO::interrupt(process *p)
 		} else if(p->regs[1] == 6) // int fputs(char*, fd)
 		{
 			FILE *f = IO::searchFile(p->regs[3]);
-			if((p->regs[0] = fputs((char*)(p->mem + p->regs[2]), f)) == EOF)
+			if((p->regs[0] = fputs((char*)(heap + p->regs[2]), f)) == EOF)
 				p->regs[0] = 0x100;
 		} else if(p->regs[1] == 7) // int fgets(char*, int, fd)
 		{
 			FILE *f = IO::searchFile(p->regs[4]);
 			if(f == NULL) return;
-			fgets((char*)(p->mem + p->regs[2]), p->regs[3], f);
+			fgets((char*)(heap + p->regs[2]), p->regs[3], f);
 		} else if(p->regs[1] == 8) // int fclose(fd)
 		{
 			FILE *f = IO::searchFile(p->regs[2]);
@@ -216,10 +216,10 @@ void IO::interrupt(process *p)
 			p->regs[0] = ftell(f);
 		} else if(p->regs[1] == 12) // int remove(char*)
 		{
-			p->regs[0] = remove((char*)(p->mem + p->regs[2]));
+			p->regs[0] = remove((char*)(heap + p->regs[2]));
 		} else if(p->regs[1] == 13) // int rename(char*, char*)
 		{
-			p->regs[0] = rename((char*)(p->mem + p->regs[2]), (char*)(p->mem + p->regs[3]));
+			p->regs[0] = rename((char*)(heap + p->regs[2]), (char*)(heap + p->regs[3]));
 		}
 	}
 }

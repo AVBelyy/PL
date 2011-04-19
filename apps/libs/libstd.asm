@@ -241,61 +241,6 @@ rename:
 	push 13
 	int 0x05
 	ret
-malloc:
-	mov r1 r0
-	push 1
-	int 0x02
-	ret
-free:
-	mov r1 r0
-	push 2
-	int 0x02
-	ret
-heapbyte:
-	mov r1 r0
-	push 3
-	int 0x02
-	ret
-heapint:
-	mov r1 r0
-	push 4
-	int 0x02
-	ret
-heaptostatic:
-	mov r2 r1
-	mov r1 r0
-	push 5
-	int 0x02
-	ret
-heapfromstatic:
-	mov r2 r1
-	mov r1 r0
-	push 6
-	int 0x02
-	ret
-heapsz:
-	mov r1 r0
-	push 7
-	int 0x02
-	ret
-staticsz:
-	mov r2 r1
-	mov r1 r0
-	push 8
-	int 0x02
-	ret
-heapbyteset:
-	mov r2 r1
-	mov r1 r0
-	push 9
-	int 0x02
-	ret
-heapintset:
-	mov r2 r1
-	mov r1 r0
-	push 10
-	int 0x02
-	ret
 export:
 	delay, random, signal, time, localtime
 	hidecursor, showcursor
@@ -306,5 +251,3 @@ export:
 	getc, getcne, gets
 	itoa, atoi
 	strcpy, strlen
-	malloc, free, heapbyte, heapint, heaptostatic
-	heapfromstatic, heapsz, staticsz, heapbyteset, heapintset

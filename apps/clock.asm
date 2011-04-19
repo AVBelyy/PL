@@ -72,30 +72,30 @@ code:
 	if (&ttyWidth != r0) goto mainloop
 	if (&ttyHeight != r1) goto mainloop
 	call localtime(timeinfo)
-	if (r8 == timeinfo.tm_sec) goto update
-	mov r8 timeinfo.tm_sec
+	if (r8 == &timeinfo.tm_sec) goto update
+	mov r8 &timeinfo.tm_sec
 	xor r9 1
 	call gotoxy(r6 r7)
 	# print hours
 	mov r0 '0'
-	if (timeinfo.tm_hour <= 9) call putc()
-	call itoa(buffer timeinfo.tm_hour)
+	if (&timeinfo.tm_hour <= 9) call putc()
+	call itoa(buffer &timeinfo.tm_hour)
 	call puts()
-	if (r9) push ':'	
+	if (r9) push ':'
 	push ' '
 	call putc()
 	# print minutes
 	mov r0 '0'
-	if (timeinfo.tm_min <= 9) call putc()
-	call itoa(buffer timeinfo.tm_min)
+	if (&timeinfo.tm_min <= 9) call putc()
+	call itoa(buffer &timeinfo.tm_min)
 	call puts()
 	if (r9) push ':'
 	push ' '
 	call putc()
 	# print seconds
 	mov r0 '0'
-	if (timeinfo.tm_sec <= 9) call putc()
-	call itoa(buffer timeinfo.tm_sec)
+	if (&timeinfo.tm_sec <= 9) call putc()
+	call itoa(buffer &timeinfo.tm_sec)
 	call puts()
 	goto update
 	label end

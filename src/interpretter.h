@@ -20,10 +20,10 @@
 #define MAX_PROCESS			16
 #define MAX_INTERRUPT		16
 #define MAX_ENTRIES			16
+#define HEAP_SIZE			65536
 
 // Signal types
 #define KERNEL_STARTPROCESS	4
-#define KERNEL_EXITPROCESS	8
 
 // Constants
 #define OP_CONST			0
@@ -32,6 +32,12 @@
 #define OP_REGPTR			3
 #define OP_REG				4
 #define OP_PROCPTR			5
+
+#define HEAP_NULL			0
+
+// Error codes
+#define ERR_OK				0
+#define ERR_NOTENOUGHMEM	1
 
 // Structures
 struct p_procs
@@ -67,11 +73,14 @@ struct int_handler {
 	void (*handler)(process*);
 };
 
+extern uint8_t heap[HEAP_SIZE+1];
 extern process *plist[MAX_PROCESS];
 extern int_handler interrupts[MAX_INTERRUPT];
 extern uint8_t pcount;
 
 void callproc(void*);
+uint16_t heap_alloc(uint16_t size);
+void heap_free(uint16_t ptr);
 
 class process {
 	public:
@@ -89,7 +98,8 @@ class process {
 	uint8_t pid;
 	char *name;
 	uint32_t regs[10];
-	uint8_t *mem;
+	uint16_t staticPtr;
+	uint16_t errorCode;
 	process(char*);
 	uint16_t fgetint();
 	p_operand getop(bool = false);

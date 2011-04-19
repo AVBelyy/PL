@@ -2,17 +2,23 @@
 
 const:
 	MEM_SIZE	30000
-static:
+atexit:
+	# dealloc brainfuck cells
+	free r7
+	ret
 code:
 	# R5 - current command
 	# R6 - file descriptor
 	# R7 - current cell
 	# R8 - current command number
 	# R9 - entry level
+	push KERNEL_ATEXIT
+	or r0 KERNEL_ATCTRLC
+	push atexit
+	call signal()
 	call fopen("program.bf" "rb")
 	mov r6 r0
-	call malloc(MEM_SIZE)
-	mov r7 r0
+	alloc r7 MEM_SIZE
 	if ( r7 == NULL ) goto heap_error
 	label exec
 		call fgetc( r6 )
@@ -31,34 +37,26 @@ code:
 
 	# --- begin subroutines ---
 	label printchar
-		call heapbyte( r7 )
-		call putc()
+		call putc( &r7 )
 	goto finally
 	label inc_cell
-		call heapbyte( r7 )
+		mov r0 &r7
 		inc r0
 		mod r0 0xFF
-		mov r1 r0
-		push r7
-		call heapbyteset()
+		mov &r7 r0
 	goto finally
 	label dec_cell
-		call heapbyte( r7 )
+		mov r0 &r7
 		dec r0
 		mod r0 0xFF
-		mov r1 r0
-		push r7
-		call heapbyteset()
+		mov &r7 r0
 	goto finally
 	label getchar
 		call getc()
-		mov r1 r0
-		push r7
-		call heapbyteset()
+		mov &r7 r0
 	goto finally
 	label while
-		call heapbyte( r7 )
-		if ( r0 != 0 ) goto finally
+		if ( &r7 != 0 ) goto finally
 		inc r9
 		label strip
 			if ( r9 == 0 ) goto finally_while
@@ -70,8 +68,7 @@ code:
 		label finally_while
 	goto finally
 	label endwhile
-		call heapbyte( r7 )
-		if ( r0 == 0 ) goto finally
+		if ( &r7 == 0 ) goto finally
 		dec r9
 		label end_strip
 			if ( r9 == 0 ) goto finally_endwhile

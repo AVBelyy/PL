@@ -103,7 +103,7 @@ if [ -d lib ]; then
 fi
 
 printf "Compiling kernel.. "
-$cc -c src/heap.cpp src/io.cpp src/interpretter.cpp src/kernel.cpp -w -Os -Isrc -Ihal/$halname $inc -DPLATFORM=$platform $cflags >/dev/null 2>build.err
+$cc -c src/io.cpp src/interpretter.cpp src/kernel.cpp -w -Os -Isrc -Ihal/$halname $inc -DPLATFORM=$platform $cflags >/dev/null 2>build.err
 if [ "$?" -eq 0 ]; then
 	echo OK
 else

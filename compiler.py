@@ -31,11 +31,12 @@ opcodes = (
 	("call",	0x11), #
 	("ret",		0x12), #
 	("push",	0x13), #
-	("movf",	0x14),
+	("alloc",	0x14), #
 	("int",		0x15), #
 	("mod",		0x16), #
 	("pid",		0x17), #
 	("calld",	0x18), #
+	("free",	0x19), #
 )
 
 curLine, curSection, sectionLength, sections = 0, "", {"code": 0, "static": 0}, {"code": [], "static": []}
@@ -62,7 +63,7 @@ def search_file(filename, paths):
 	raise IOError, "file '%s' not found" % filename
 
 def splitln(ln):
-	ln = re.sub('("|\')[^("|\')]*("|\')', lambda x: x.group(0).replace(" ", "%%_SPACE_%%").replace("\t", "%%_TAB_%%"), ln)
+	ln = re.sub('("|\')[^"\']*("|\')', lambda x: x.group(0).replace(" ", "%%_SPACE_%%").replace("\t", "%%_TAB_%%"), ln)
 	return [x.replace("%%_SPACE_%%", " ").replace("%%_TAB_%%", "\t") for x in re.split("\s+", ln)]
 
 def encode(ln):
@@ -107,7 +108,7 @@ def varinfo(var):
 			return info
 
 def checkop(operand, flags):
-	if not operand["flags"] in flags:
+	if not (operand["flags"] & 0x7F) in flags:
 		raise TypeError, "incorrect operand type"
 
 def getop(op):
@@ -135,9 +136,10 @@ def getop(op):
 		sectionLength["static"] += len(op)
 		sections["static"].append(op)
 		constStrCounter += 1
-		return {"flags": 0, "value": sectionLength["static"] - len(op)}
+		return {"flags": 0x80, "value": sectionLength["static"] - len(op)}
 	# ...or const char?
 	if op[0] == op[-1] == "'": return {"flags": 0, "value": getcint(op)}
+	if op[0] == "&": op, operand["flags"] = op[1:], 1 | operand["flags"]
 	# i think it's member of struct
 	if op.find(".") != 1:
 		try:
@@ -147,17 +149,19 @@ def getop(op):
 			members = [s for s in structTable if s["name"] == info[0].lower()][0]["members"]
 			offset = 0
 			for m in members: 
-				if m[0] == member: 	
-					return {"flags": 2 if m[1] == "int" else 1, "value": info[1] + offset}
+				if m[0] == member:
+					return {"flags": (2 if (m[1] == "int" and operand["flags"] == 1) else 1) | 0x80, "value": info[1] + offset}
 				else:
 					offset += m[2]
 		except: pass
-	if op[0] == "&": op, operand["flags"] = op[1:], 1
 	if len(op) == 2 and op[0].lower() == "r" and ord(op[1]) in xrange(48, 58):
 		return {"flags": (not operand["flags"]) + 3, "value": int(op[1])}
 	for x in varTable:
 		if x["name"] == op:
-			if x["type"] == "int" and operand["flags"]: operand["flags"] = 2
+			if x["type"] == "int" and operand["flags"] == 1:
+				operand["flags"] = 0x80 | 2
+			else:
+				operand["flags"] = 0x80
 			operand["value"] = x["start"]
 			return operand
 	try:
@@ -335,7 +339,7 @@ def parse(ln):
 				buf.append(getcmd(tokens[0]))
 				buf.append(operand["value"])
 				sectionLength[curSection] += 2
-			elif tokens[0] in ("add", "sub", "mul", "div", "xor", "or", "and", "shl", "shr", "mod"): #1 - register, 2 - any data
+			elif tokens[0] in ("add", "sub", "mul", "div", "xor", "or", "and", "shl", "shr", "mod", "alloc"): #1 - register, 2 - any data
  				buf.append(sectionLength[curSection]) # information for bin writer - command offset
 				buf.append(getcmd(tokens[0]))
 				operand = getop(tokens[1])
@@ -347,7 +351,7 @@ def parse(ln):
 				buf.append(operand["value"] >> 8)
 				buf.append(operand["value"] & 0xff)	
 				sectionLength[curSection] += 5
-			elif tokens[0] in ("mov", "movf"): #1 and 2 - any data
+			elif tokens[0] == "mov": #1 and 2 - any data
 				buf.append(sectionLength[curSection]) # information for bin writer - command offset
 				buf.append(getcmd(tokens[0]))
 				for x in (1, 2):
@@ -357,7 +361,7 @@ def parse(ln):
 					buf.append(operand["value"] >> 8)
 					buf.append(operand["value"] & 0xff)
 				sectionLength[curSection] += 7
-			elif tokens[0] in ("push", "int"): #1 - any data
+			elif tokens[0] in ("push", "int", "free"): #1 - any data
 				buf.append(sectionLength[curSection]) # information for bin writer - command offset
 				buf.append(getcmd(tokens[0]))
 				operand = getop(tokens[1])	

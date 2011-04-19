@@ -6,6 +6,7 @@
 
 using namespace std;
 
+uint8_t heap[HEAP_SIZE+1];
 process *plist[MAX_PROCESS];
 int_handler interrupts[MAX_INTERRUPT];
 uint8_t pcount = 0;
@@ -36,9 +37,40 @@ void callproc(void *params)
 	p->breakLevel = 0;
 }
 
+uint16_t heap_alloc(uint16_t size)
+{
+	uint16_t free = 0, header = 0;
+	if(!size) return HEAP_NULL;
+	for(int i = 0; i < HEAP_SIZE; i++)
+	{
+		header = (heap[i] << 8) + heap[i+1];
+		if(!header) ++free;
+		else
+		{
+			free = 0;
+			i += header + 1;
+		}
+		if(free == size + 2)
+		{
+			heap[i+1-free] = size >> 8;
+			heap[i+2-free] = size & 0xFF;
+			return i+3-free;
+		}
+	}
+	return HEAP_NULL;
+}
+
+void heap_free(uint16_t ptr)
+{
+	if(ptr < 2 || ptr > HEAP_SIZE - 1) return;
+	uint16_t size = (heap[ptr-1] << 8) + heap[ptr-2];
+	if(size) memset((void*)(heap + ptr - 2), '\0', size + 2);
+}
+
 process::process(char *path)
 {
 	int i, len;
+	errorCode = ERR_OK;
 	owner = this;
 	f = fopen(path, "rb");
 	len = fgetc((FILE*)f)+1;
@@ -66,13 +98,18 @@ process::process(char *path)
 	uint16_t entryPoint = fgetint();
 	header.static_size = fgetint();
 	memset(regs, 0, 10 * sizeof(uint32_t));
-	memset(entries, 0, 10 * sizeof(p_entry));
+	memset(entries, 0, MAX_ENTRIES * sizeof(p_entry));
 	stackPointer = 0;
 	resultFlag = true;
 	lockFlag = false;
-	mem = (uint8_t*)malloc(header.static_size);
-	// read STATIC section
-	for(i = 0; i < header.static_size; i++) mem[i] = fgetc((FILE*)f);
+	staticPtr = heap_alloc(header.static_size);
+	if(header.static_size && staticPtr == HEAP_NULL)
+	{
+		errorCode = ERR_NOTENOUGHMEM;
+		return;
+	}
+	// read STATIC section into heap
+	for(i = staticPtr; i < staticPtr + header.static_size; i++) heap[i] = fgetc((FILE*)f);
 	breakLevel = 0;
 	entries[entryLevel = 0].p = this;
 	entries[0].offset = entries[0].start = entryPoint;
@@ -85,7 +122,7 @@ process::process(char *path)
 		if(header.lib_byte & 0x40)
 			pid = header.lib_byte & 0x3F;
 		else
-			for(uint8_t i = 64; i < 128; i++)
+			for(int i = 64; i < 128; i++)
 				if(!process::search(i))
 				{
 					pid = i;
@@ -94,7 +131,7 @@ process::process(char *path)
 	}
 	else
 	// if application
-		for(uint8_t i = 128; i <= 255; i++)
+		for(int i = 128; i <= 255; i++)
 			if(!process::search(i))
 			{
 				pid = i;
@@ -113,12 +150,17 @@ p_operand process::getop(bool ReturnPtr) {
 	p_operand op;
 	op.type = fgetc((FILE*)owner->f);
 	op.value = fgetint();
-	if(op.type == OP_CHAR) op.value = mem[op.value];
-	else if(op.type == OP_INT && !ReturnPtr) op.value = (mem[op.value] << 8) + mem[op.value+1];
+	if(op.type & 0x80) // if STATIC flag
+	{
+		op.type ^= 0x80;
+		op.value += owner->staticPtr;
+	}
+	if(op.type == OP_CHAR) op.value = heap[op.value];
+	else if(op.type == OP_INT && !ReturnPtr) op.value = (heap[op.value] << 8) + heap[op.value+1];
 	else if(op.type == OP_REG && !ReturnPtr) op.value = regs[op.value];
 	else if(op.type == OP_REGPTR)
 		if(ReturnPtr) op.value = regs[op.value];
-		else op.value = mem[regs[op.value]];
+		else op.value = heap[regs[op.value]];
 	return op;
 }
 void process::__call(uint16_t addr)
@@ -130,7 +172,7 @@ void process::__call(uint16_t addr)
 		// if procedure static in library
 		process *lib = process::search((addr & 0x3F00) >> 8);
 		if(lib == NULL) return;
-		for(uint8_t i = 0; i < lib->header.procs_cnt; i++)
+		for(int i = 0; i < lib->header.procs_cnt; i++)
 			if(lib->header.procs[i].id == (addr & 0xFF))
 			{
 				// store current process
@@ -147,7 +189,7 @@ void process::__call(uint16_t addr)
 			}
 	} else { // if procedure is local
 		// search proc in proctable
-		for(uint8_t i = 0; i < owner->header.procs_cnt; i++)
+		for(int i = 0; i < owner->header.procs_cnt; i++)
 			if(owner->header.procs[i].id == (addr & 0xFF))
 			{
 				entries[entryLevel].p = owner;
@@ -161,19 +203,14 @@ void process::__call(uint16_t addr)
 bool process::exec() {
 	FILE *file = (FILE*)owner->f;
 	uint8_t cmd = fgetc(file);
-	if(feof(file))
-	{
-		sigexec(KERNEL_EXITPROCESS, (void*)this);
-		return false;
-	}
+	if(feof(file)) return false;
 	switch(cmd)
 	{
 	#ifdef __DEBUG__
 	case 0x00: // NOP
 	{
-		sigexec(8, NULL);
-		if(!resultFlag) break;
-		printf("R0 = %d\nR1 = %d\nR2 = %d\nR3 = %d\n\n", regs[0], regs[1], regs[2], regs[3]);
+		if(resultFlag)
+			printf("R0 = %d\nR1 = %d\nR2 = %d\nR3 = %d\n\n", regs[0], regs[1], regs[2], regs[3]);
 		break;
 	}
 	#endif
@@ -236,26 +273,26 @@ bool process::exec() {
 		if(!resultFlag) break;
 		if(addr.type == OP_REG) regs[addr.value] = value.value;
 		else if(addr.type == OP_INT) {
-			mem[addr.value] = value.value >> 8;
-			mem[addr.value+1] = value.value & 0xFF;
-		} else mem[addr.value] = value.value;
+			heap[addr.value] = value.value >> 8;
+			heap[addr.value+1] = value.value & 0xFF;
+		} else heap[addr.value] = value.value;
 		break;
 	}
 	case 0x11: // CALL
 	{
 		uint16_t addr = fgetint();
-		if(!resultFlag) break;
-		__call(addr);
+		if(resultFlag)
+			__call(addr);
 		break;
 	}
 	case 0x18: // CALLD
 	{
 		p_operand lib_pid = getop();
-		char *proc = (char*)(mem + fgetint());
+		char *proc = (char*)(heap + fgetint());
 		if(!resultFlag) break;
 		process *lib = process::search(lib_pid.value);
 		if(lib == NULL || (lib->header.lib_byte >> 6 != 0b10)) break;
-		for(uint8_t i = 0; i < lib->header.procs_cnt; i++)
+		for(int i = 0; i < lib->header.procs_cnt; i++)
 			if(!strcmp(lib->header.procs[i].name, proc))
 			{
 				// store current process
@@ -291,16 +328,13 @@ bool process::exec() {
 			regs[stackPointer++] = op.value;
 		break;
 	}
-	case 0x14: // MOVF
+	case 0x14: // ALLOC
 	{
-		// NOT IMPLEMENTED YET!
-	// ARG1 IS A DESTIONATION
-		// ARG2 IS A SOURCE IN _LOCAL_ PROGRAM MEMORY (IN LIBRARIES)
-		// p_operand addr = getop(true), value = getop();
-		// if(!resultFlag) break;
-		// if(addr.type == OP_REG) regs[addr.value] = value.value;
-		// else mem[addr.value] = value.value;
-		// break;
+		uint16_t index = fgetc(file);
+		p_operand op = getop();
+		if(resultFlag)
+			regs[index] = heap_alloc(op.value);
+		break;
 	}
 	case 0x15: // INT
 	{
@@ -338,13 +372,13 @@ bool process::exec() {
 					t->tm_yday >> 8, t->tm_yday & 0xFF,
 					t->tm_isdst >> 8, t->tm_isdst & 0xFF
 				};
-				memcpy((void*)(mem + regs[1]), (void*)timedata, sizeof(timedata));
+				memcpy((void*)(heap + regs[1]), (void*)timedata, sizeof(timedata));
 			}
 			break;
 		}
 		default:
 		{
-			for(uint8_t i = 0; i < MAX_INTERRUPT; i++) if(num.value == interrupts[i].id)
+			for(int i = 0; i < MAX_INTERRUPT; i++) if(num.value == interrupts[i].id)
 				interrupts[i].handler(this);
 			break;
 		}
@@ -354,17 +388,25 @@ bool process::exec() {
 	case 0x17: // PID
 	{
 		uint16_t index = fgetc(file);
-		char *name = (char*)(mem + fgetint());
+		char *name = (char*)(heap + fgetint());
 		if(!resultFlag) break;
-		for(uint8_t i = 0; i < pcount; i++)
+		for(int i = 0; i < pcount; i++)
 			if(!strcmp(plist[i]->name, name))
 			{
 				regs[index] = plist[i]->pid;
 				break;
 			}
+		break;
+	}
+	case 0x19: // FREE
+	{
+		p_operand op = getop();
+		if(resultFlag)
+			heap_free(op.value);
+		break;
 	}
 	}
-	return resultFlag = true;;
+	return resultFlag = true;
 }
 void process::share() {
 	// if process isn't library
@@ -373,7 +415,7 @@ void process::share() {
 	if(entries[0].offset) while(!feof((FILE*)f)) exec();
 }
 process* process::search(uint16_t pid) {
-	for(uint8_t i = 0; i < pcount; i++) if(plist[i]->pid == pid) return plist[i];
+	for(int i = 0; i < pcount; i++) if(plist[i]->pid == pid) return plist[i];
 	return NULL;
 }
 void process::extcall(uint16_t procid)
@@ -388,7 +430,7 @@ void process::extcall(uint16_t procid)
 
 }
 uint8_t process::attachInterrupt(uint8_t id, void (*handler)(process*)) {
-	for(uint16_t i = 0; i < MAX_INTERRUPT; i++) if(!interrupts[i].id) {
+	for(int i = 0; i < MAX_INTERRUPT; i++) if(!interrupts[i].id) {
 		interrupts[i].id = id;
 		interrupts[i].handler = handler;
 		return i;
