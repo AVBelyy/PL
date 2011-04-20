@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 	#endif
 	process l("libstd.bin");
 	process p1("clock.bin");
-	//process p2("test.bin");
+	process p2("test.bin");
 	l.share();
 
 	app_t *app = apps;
