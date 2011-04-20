@@ -7,6 +7,7 @@
 using namespace std;
 
 uint8_t heap[HEAP_SIZE+1];
+app_t *apps = NULL;
 process *plist[MAX_PROCESS];
 int_handler interrupts[MAX_INTERRUPT];
 uint8_t pcount = 0;
@@ -73,6 +74,11 @@ process::process(char *path)
 	errorCode = ERR_OK;
 	owner = this;
 	f = fopen(path, "rb");
+	if(f == NULL)
+	{
+		errorCode = ERR_IOERROR;
+		return;
+	}
 	len = fgetc((FILE*)f)+1;
 	name = (char*)malloc(len);
 	fgets(name, len, (FILE*)f);
@@ -130,6 +136,7 @@ process::process(char *path)
 				}
 	}
 	else
+	{
 	// if application
 		for(int i = 128; i <= 255; i++)
 			if(!process::search(i))
@@ -137,6 +144,12 @@ process::process(char *path)
 				pid = i;
 				break;
 			}
+		// also add in 'apps' list
+		app_t *app = (app_t*)malloc(sizeof(app_t*));
+		app->p = this;
+		app->next = apps;
+		apps = app;
+	}
 	// insert process in process list
 	plist[pcount++] = this;
 	// exec signal
@@ -411,8 +424,8 @@ bool process::exec() {
 void process::share() {
 	// if process isn't library
 	if(!(header.lib_byte & 0x80)) return;
-	// run init code (if it's present)
-	if(entries[0].offset) while(!feof((FILE*)f)) exec();
+	// run init code
+	while(!feof((FILE*)f)) exec();
 }
 process* process::search(uint16_t pid) {
 	for(int i = 0; i < pcount; i++) if(plist[i]->pid == pid) return plist[i];

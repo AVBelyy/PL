@@ -48,9 +48,24 @@ BOOL WINAPI __CtrlHandler(DWORD dwCtrlType)
 }
 #endif
 
-int main() {
+int main(int argc, char *argv[]) {
+	#ifdef __DEBUG__
+		if(argc < 2)
+		{
+			printf("Usage: %s FILE [ARGS]\n", argv[0]);
+			exit(1);
+		}
+		char *filename = argv[1];
+		if(argc == 2)
+			char *initArgs = "";
+		else
+			char *initArgs = argv[2];
+	#else
+		char *filename = "clock.bin";
+		char *initArgs = "";
+	#endif
 	// initialize
-	for(uint8_t i = 0; i < MAX_PROCESS; i++) plist[i] = (process*)malloc(sizeof(process*));
+	for(int i = 0; i < MAX_PROCESS; i++) plist[i] = (process*)malloc(sizeof(process*));
 	srand((unsigned)time(NULL));
 	// set Ctrl-C handlers
 	#if (PLATFORM == PLATFORM_UNIX)
@@ -58,13 +73,17 @@ int main() {
 	#elif (PLATFORM == PLATFORM_WIN32)
 		SetConsoleCtrlHandler((PHANDLER_ROUTINE)__CtrlHandler, TRUE);
 	#endif
-	// *** begin kernel code ***
 	process l("libstd.bin");
-	//process p("bf.bin");
-	//process p("test.bin");
-	process p("clock.bin");
+	process p1("clock.bin");
+	//process p2("test.bin");
 	l.share();
-	while(!feof((FILE*)p.f)) p.exec();
+
+	app_t *app = apps;
+	do
+	{
+		app->p->exec();
+	} while(app = (app->p->lockFlag ? app : (app->next == NULL ? apps : apps->next)));
+	//while(!feof((FILE*)p.f)) p.exec();
 	// At exit..
 	sigexec(KERNEL_ATEXIT, NULL);
 	return 0;

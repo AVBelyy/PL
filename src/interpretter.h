@@ -37,7 +37,8 @@
 
 // Error codes
 #define ERR_OK				0
-#define ERR_NOTENOUGHMEM	1
+#define ERR_IOERROR			1
+#define ERR_NOTENOUGHMEM	2
 
 // Structures
 struct p_procs
@@ -68,12 +69,20 @@ struct callproc_t
 	uint16_t procid;
 };
 
-struct int_handler {
+struct int_handler
+{
 	uint8_t id;
 	void (*handler)(process*);
 };
 
+struct app_t
+{
+	process *p;
+	app_t *next;
+};
+
 extern uint8_t heap[HEAP_SIZE+1];
+extern app_t *apps;
 extern process *plist[MAX_PROCESS];
 extern int_handler interrupts[MAX_INTERRUPT];
 extern uint8_t pcount;

@@ -578,7 +578,6 @@ for x in localProcTable:
 	# offset
 	o.write(chr(entryPoint >> 8) + chr(entryPoint & 0xff))
 	entryPoint += sectionLength[x["name"]]
-if not len(sections["code"]): entryPoint = 0
 o.write(chr(entryPoint >> 8) + chr(entryPoint & 0xff))
 o.write(chr(staticSize >> 8) + chr(staticSize & 0xff))
 #secondly write DATA section
