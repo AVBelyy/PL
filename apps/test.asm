@@ -23,12 +23,17 @@ code:
 	mov r5 1
 	mov r6 1
 	mov r7 1
-	call clrscr()
+	call createwin()
+	call displaywin()
+	call noscroll()
 	call hidecursor()
 	label loop
 	call ttysize()
 	mov r8 r0
 	mov r9 r1
+	call gotoxy( r5 r6 )
+	call putc( '@' )
+	call refresh()
 	call gotoxy( r5 r6 )
 	call putc( ' ' )
 	if ( r7 == 1 ) goto RightDown
@@ -76,7 +81,6 @@ code:
 			sub r7 2
 			goto finally
 	label finally
-	call write( r5 r6 )
 	call delay( 25 )
 	goto loop
 	label end

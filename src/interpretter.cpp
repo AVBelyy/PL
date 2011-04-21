@@ -150,6 +150,9 @@ process::process(char *path)
 		app->next = apps;
 		apps = app;
 	}
+	// by default use 'stdscr' as program's window
+	displayFlag = false;
+	w = stdscr;
 	// insert process in process list
 	plist[pcount++] = this;
 	// exec signal
@@ -223,7 +226,7 @@ bool process::exec() {
 	case 0x00: // NOP
 	{
 		if(resultFlag)
-			printf("R0 = %d\nR1 = %d\nR2 = %d\nR3 = %d\n\n", regs[0], regs[1], regs[2], regs[3]);
+			wprintw(w, "R0 = %d\nR1 = %d\nR2 = %d\nR3 = %d\n\n", regs[0], regs[1], regs[2], regs[3]);
 		break;
 	}
 	#endif

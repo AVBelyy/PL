@@ -2,18 +2,22 @@
 	(C) Anton Belyy, 2011
 */
 
-#include <kernel.h>
-
 #ifndef INTERPRETTER_H
 #define INTERPRETTER_H
+
+#include <kernel.h>
 
 #include <stdlib.h>
 #include <string.h>
 
+
 #if (PLATFORM == PLATFORM_AVR)
 	#include <avr/pgmspace.h>
-#elif (PLATFORM == PLATFORM_UNIX)
-	#include <unistd.h>
+#elif (PLATFORM == PLATFORM_UNIX) || (PLATFORM == PLATFORM_WIN32)
+	#if (PLATFORM == PLATFORM_UNIX)
+		#include <unistd.h>
+	#endif
+	#include <ncurses.h>
 #endif
 
 // User-defined constants
@@ -101,7 +105,7 @@ class process {
 	} header;
 	p_entry entries[MAX_ENTRIES];
 	uint8_t stackPointer, entryLevel, breakLevel;
-	bool resultFlag, lockFlag;
+	bool resultFlag, lockFlag, displayFlag;
 	process *owner;
 	void *f;
 	uint8_t pid;
@@ -109,6 +113,7 @@ class process {
 	uint32_t regs[10];
 	uint16_t staticPtr;
 	uint16_t errorCode;
+	WINDOW *w;
 	process(char*);
 	uint16_t fgetint();
 	p_operand getop(bool = false);

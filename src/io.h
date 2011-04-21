@@ -11,11 +11,6 @@
 #define IO_KEYBOARD_SUPPORT
 #define IO_MAXFILES					32
 
-// Disable ncurses's getch()
-#ifdef CURSES
-	#undef getch()
-#endif
-
 /*
 	Platform-dependent functions
 */
@@ -24,16 +19,13 @@
 	#define EOL_SYMBOL		0x0A
 	// In Linux: simulating getch() function
 
-	#include <sys/ioctl.h>
 	#include <stdio.h>
-	#include <termios.h>
-	#include <unistd.h>
-
-	char getch();
+	#include <ncurses.h>
 #elif (PLATFORM == PLATFORM_WIN32)
 	#define EOL_SYMBOL		0x0D
 
 	#include <stdio.h>
+	#include <ncurses.h>
 #elif (PLATFORM == PLATFORM_AVR)
 	#define EOL_SYMBOL		0x0A
 	#undef ENABLE_KEYBOARD_SUPPORT
@@ -53,12 +45,6 @@
 	long int ftell(FILE*);
 	int fputs(const char*);
 #endif
-
-void clrscr();
-void gotoxy(int, int);
-uint16_t ttysize();
-void hidecursor();
-void showcursor();
 
 class IO
 {

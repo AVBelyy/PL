@@ -20,14 +20,16 @@ code:
 	# R9 - blink flag
 	call signal(KERNEL_ATCTRLC atexit)
 	call hidecursor()
+	call createwin()
+	call displaywin()
 	label mainloop
 	call clrscr()
 	mov r5 0
 	mov r8 0
 	mov r9 0
 	call ttysize()
-	mov &ttyWidth r0
-	mov &ttyHeight r1
+	mov *ttyWidth r0
+	mov *ttyHeight r1
 	sub r0 WN_WIDTH
 	div r0 2
 	sub r1 WN_HEIGHT
@@ -69,33 +71,34 @@ code:
 	div r7 2
 	label update
 	call ttysize()
-	if (&ttyWidth != r0) goto mainloop
-	if (&ttyHeight != r1) goto mainloop
+	if (*ttyWidth != r0) goto mainloop
+	if (*ttyHeight != r1) goto mainloop
 	call localtime(timeinfo)
-	if (r8 == &timeinfo.tm_sec) goto update
-	mov r8 &timeinfo.tm_sec
+	if (r8 == *timeinfo.tm_sec) goto update
+	mov r8 *timeinfo.tm_sec
 	xor r9 1
 	call gotoxy(r6 r7)
 	# print hours
 	mov r0 '0'
-	if (&timeinfo.tm_hour <= 9) call putc()
-	call itoa(buffer &timeinfo.tm_hour)
+	if (*timeinfo.tm_hour <= 9) call putc()
+	call itoa(buffer *timeinfo.tm_hour)
 	call puts()
 	if (r9) push ':'
 	push ' '
 	call putc()
 	# print minutes
 	mov r0 '0'
-	if (&timeinfo.tm_min <= 9) call putc()
-	call itoa(buffer &timeinfo.tm_min)
+	if (*timeinfo.tm_min <= 9) call putc()
+	call itoa(buffer *timeinfo.tm_min)
 	call puts()
 	if (r9) push ':'
 	push ' '
 	call putc()
 	# print seconds
 	mov r0 '0'
-	if (&timeinfo.tm_sec <= 9) call putc()
-	call itoa(buffer &timeinfo.tm_sec)
+	if (*timeinfo.tm_sec <= 9) call putc()
+	call itoa(buffer *timeinfo.tm_sec)
 	call puts()
+	call refresh()
 	goto update
 	label end

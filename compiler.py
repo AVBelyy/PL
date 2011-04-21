@@ -85,8 +85,8 @@ def getcint(cint):
 
 	if cint[-1] == "k":				return getcint(cint[:-1]) * 1024
 	if cint[0] == cint[-1] == "'":	return ord(encode(cint[1:-1])[0])
-	if cint[:2] == "0x":			return int(cint, 16)& 0xffff
-	elif cint[:2] == "0b":			return int(cint, 2) & 0xffff
+	if cint[:2] == "0x":			return int(cint, 16) & 0xffff
+	elif cint[:2] == "0b":			return int(cint, 2)  & 0xffff
 	return int(cint) & 0xffff
 
 def procid(proc):
@@ -139,7 +139,7 @@ def getop(op):
 		return {"flags": 0x80, "value": sectionLength["static"] - len(op)}
 	# ...or const char?
 	if op[0] == op[-1] == "'": return {"flags": 0, "value": getcint(op)}
-	if op[0] == "&": op, operand["flags"] = op[1:], 1 | operand["flags"]
+	if op[0] == "*": op, operand["flags"] = op[1:], 1 | operand["flags"]
 	# i think it's member of struct
 	if op.find(".") != 1:
 		try:

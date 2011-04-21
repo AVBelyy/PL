@@ -1,8 +1,8 @@
 #!/bin/sh
 
 cc=clang
-cflags="-D__DEBUG__"
-ldflags=
+#cflags="-D__DEBUG__"
+ldflags=-lcurses
 
 hal=
 halname=
@@ -58,7 +58,7 @@ else
 	exit 1
 fi
 
-printf "Compiler: $cc\nCFlags: $cflags\n\n"
+printf "Compiler: $cc\nCFlags: $cflags\nLDFlags: $ldflags\n\n"
 
 if [ -n "$halname" ]; then
 	printf "Compiling HAL ($halname).. "
@@ -88,7 +88,7 @@ if [ -d lib ]; then
 				else
 					compilerOpts=
 				fi
-				$cc -c $name -w -Isrc -Os -Ilib -DPLATFORM=$platform $cflags $compilerOpts >/dev/null 2>build.err
+				$cc -c $name -w -Isrc -Os -Ilib -DPLATFORM=$platform $cflags $ldflags $compilerOpts >/dev/null 2>build.err
 				if [ "$?" -eq 0 ]; then
 					echo OK
 				else
@@ -103,7 +103,7 @@ if [ -d lib ]; then
 fi
 
 printf "Compiling kernel.. "
-$cc -c src/io.cpp src/interpretter.cpp src/kernel.cpp -w -Os -Isrc -Ihal/$halname $inc -DPLATFORM=$platform $cflags >/dev/null 2>build.err
+$cc -c src/io.cpp src/interpretter.cpp src/kernel.cpp -w -Os -Isrc -Ihal/$halname $inc -DPLATFORM=$platform $cflags $ldflags >/dev/null 2>build.err
 if [ "$?" -eq 0 ]; then
 	echo OK
 else

@@ -29,15 +29,15 @@ localtime:
 	ret
 strcpy:
 	label loop
-		mov &r0 &r1
-		if (&r1==0) ret
+		mov *r0 *r1
+		if (*r1==0) ret
 		inc r0
 		inc r1
 	goto loop
 strlen:
 	xor r1 r1
 	label loop
-		if (&r0==0) goto return
+		if (*r0==0) goto return
 		inc r0
 		inc r1
 	goto loop
@@ -71,7 +71,7 @@ itoa:
 		mul r2 10
 		if (r1>=r2) goto count
 	mov r2 1
-	mov &r0 0
+	mov *r0 0
 	label loop
 		dec r0
 		mul r2 10
@@ -80,7 +80,7 @@ itoa:
 		mul r3 10
 		div r3 r2
 		add r3 48
-		mov &r0 r3
+		mov *r0 r3
 		if (r1>=r2) goto loop
 	ret
 atoi:
@@ -88,16 +88,16 @@ atoi:
 	mov r2 1
 	label count
 		inc r0
-		if (&r0) goto count
+		if (*r0) goto count
 	dec r0
 	label loop
-		mov r1 &r0
+		mov r1 *r0
 		sub r1 48
 		mul r2 10
 		mul r1 r2
 		add r3 r1
 		dec r0
-		if (&r0) goto loop
+		if (*r0) goto loop
 	div r3 10
 	push r3
 	ret
@@ -120,11 +120,11 @@ gets:
 	label read
 		call getc()
 		if (r0==r3) goto break
-		mov &r2 r0
+		mov *r2 r0
 		inc r2
 	goto read
 	label break
-	mov &r2 0
+	mov *r2 0
 	push 1
 	int 0x01
 	if (r0 == 1) ret
@@ -241,12 +241,54 @@ rename:
 	push 13
 	int 0x05
 	ret
+refresh:
+	push 10
+	push 1
+	int 0x05
+	ret
+createwin:
+	push 10
+	push 2
+	int 0x05
+	ret
+displaywin:
+	push 10
+	push 3
+	int 0x05
+	ret
+setwin:
+	mov r2 r0
+	push 10
+	push 4
+	int 0x05
+	ret
+scroll:
+	push 10
+	push 5
+	push 1
+	int 0x05
+	ret
+noscroll:
+	push 10
+	push 5
+	push 0
+	int 0x05
+	ret
+code:
+	call ttysize()
+	push 1
+	call gotoxy()
+	call puts("Hello! I am LIBSTD.BIN. Press any key to continue")
+	call displaywin()
+	call refresh()
+	call getc()
 export:
 	delay, random, signal, time, localtime
 	hidecursor, showcursor
 	clrscr, gotoxy, ttysize
 	fopen, fgetc, fsize, fseek, fputc, fputs, fgets
 	fclose, feof, fflush, ftell, rewind, rename, remove
+	createwin, displaywin, setwin, refresh, scroll, noscroll
 	putc, puts
 	getc, getcne, gets
 	itoa, atoi
