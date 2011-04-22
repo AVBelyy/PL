@@ -130,13 +130,14 @@ void IO::interrupt(process *p)
 	}
 	else if(p->regs[0] == 10)
 	{
-		if(p->regs[1] == 1 && p->displayFlag) wrefresh(p->w); // refresh window
+		if(p->regs[1] == 1 /*&& p->displayFlag*/) wrefresh(p->w); // refresh window
 		else if(p->regs[1] == 2) // create window
 		{
 			int x, y;
 			getmaxyx(stdscr, y, x);
-			p->w = newwin(y-1, x, 0, 0);
-			scrollok(p->w, TRUE); // enable auto-scrolling
+			p->w = newwin(y-1, x/2, 0, 0);
+			scrollok(p->w, TRUE); // enable auto-scroll
+			if(!strcmp(p->name, "test")) mvwin(p->w, 0, x/2);
 		}
 		else if(p->regs[1] == 3) // display window
 		{

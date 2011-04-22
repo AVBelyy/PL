@@ -75,19 +75,14 @@ int main(int argc, char *argv[]) {
 		SetConsoleCtrlHandler((PHANDLER_ROUTINE)__CtrlHandler, TRUE);
 	#endif
 	process l("libstd.bin");
-	//process p1("clock.bin");
+	process p1("clock.bin");
 	process p2("test.bin");
-	process p3("bf.bin");
+	//process p3("bf.bin");
 	l.share();
 
 	app_t *app = apps;
 	do
 	{
-		if(!has_key("\t"))
-		{
-			sigexec(KERNEL_ATEXIT, NULL);
-			return 0;
-		}
 		app->p->exec();
 	} while(app = (app->p->lockFlag ? app : (app->next == NULL ? apps : apps->next)));
 	//while(!feof((FILE*)p.f)) p.exec();
