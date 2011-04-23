@@ -21,7 +21,6 @@ code:
 	alloc r7 MEM_SIZE
 	if ( r7 == NULL ) goto heap_error
 	call createwin()
-	call displaywin()
 	label exec
 		call fgetc( r6 )
 		if ( r0 == EOF ) goto end

@@ -87,8 +87,11 @@ int main(int argc, char *argv[]) {
 	{
 		if(kbhit(stdscr) == '\t')
 		{
-			win = (win->next == NULL ? wins : win->next);
 			sigexec(KERNEL_ATEXIT, NULL);
+			printf("DADA!\n");
+			//win = (win->next == NULL ? wins : win->next);
+			printf("currently win=%d\n", win);
+			//IO::displayWindow(win->owner);
 			exit(0);
 		}
 		app->p->exec();

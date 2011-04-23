@@ -85,8 +85,15 @@ struct app_t
 	app_t *next;
 };
 
+struct win_t
+{
+	process *owner;
+	win_t *next;
+};
+
 extern uint8_t heap[HEAP_SIZE+1];
 extern app_t *apps;
+extern win_t *wins;
 extern process *plist[MAX_PROCESS];
 extern int_handler interrupts[MAX_INTERRUPT];
 extern uint8_t pcount;

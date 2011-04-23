@@ -57,6 +57,7 @@ class IO
 	static FILE **files;
 	static int filesCount;
 	static FILE *searchFile(int);
+	static void displayWindow(process*);
 	static void atexit(void*);
 	static void interrupt(process*);
 	IO();

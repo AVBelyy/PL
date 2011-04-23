@@ -8,6 +8,7 @@ using namespace std;
 
 uint8_t heap[HEAP_SIZE+1];
 app_t *apps = NULL;
+win_t *wins = NULL;
 process *plist[MAX_PROCESS];
 int_handler interrupts[MAX_INTERRUPT];
 uint8_t pcount = 0;

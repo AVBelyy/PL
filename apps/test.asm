@@ -24,7 +24,6 @@ code:
 	mov r6 1
 	mov r7 1
 	call createwin()
-	call displaywin()
 	call noscroll()
 	call hidecursor()
 	label loop

@@ -21,7 +21,6 @@ code:
 	call signal(KERNEL_ATCTRLC atexit)
 	call hidecursor()
 	call createwin()
-	call displaywin()
 	label mainloop
 	call clrscr()
 	mov r5 0

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cc=clang
+cc=g++
 #cflags="-D__DEBUG__"
 ldflags=-lcurses
 

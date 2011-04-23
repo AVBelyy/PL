@@ -18,6 +18,13 @@
 FILE **IO::files = (FILE**)malloc(sizeof(FILE*) * IO_MAXFILES);
 int IO::filesCount = 0;
 
+void IO::displayWindow(process *p)
+{
+	for(int i = 0; i < pcount; i++) plist[i]->displayFlag = false;
+	p->displayFlag = true;
+	wrefresh(p->w);
+}
+
 FILE* IO::searchFile(int fd)
 {
 	for(int i = 0; i < filesCount; i++)
@@ -134,18 +141,22 @@ void IO::interrupt(process *p)
 		if(p->regs[1] == 1 && p->displayFlag) wrefresh(p->w); // refresh window
 		else if(p->regs[1] == 2) // create window
 		{
+			static bool first = false;
 			int x, y;
 			getmaxyx(stdscr, y, x);
 			p->w = newwin(y-1, x, 0, 0);
 			scrollok(p->w, TRUE); // enable auto-scroll
+			win_t *win = (win_t*)malloc(sizeof(win_t*));
+			win->owner = p;
+			win->next = wins;
+			wins = win;
+			if(!first)
+			{
+				displayWindow(p);
+				first = true;
+			}
 		}
-		else if(p->regs[1] == 3) // display window
-		{
-			// hide other windows
-			for(int i = 0; i < pcount; i++) plist[i]->displayFlag = false;
-			p->displayFlag = true;
-			wrefresh(p->w);
-		}
+		else if(p->regs[1] == 3) displayWindow(p); // display window
 		else if(p->regs[1] == 4) // get window
 		{
 			if(p->regs[2] == 256)
