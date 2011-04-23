@@ -15,17 +15,22 @@
 	Platform-dependent functions
 */
 
-#if (PLATFORM == PLATFORM_UNIX)
-	#define EOL_SYMBOL		0x0A
-	// In Linux: simulating getch() function
-
+#if (PLATFORM == PLATFORM_UNIX) || (PLATFORM == PLATFORM_WIN32)
+	#if (PLATFORM == PLATFORM_UNIX)
+		#define EOL_SYMBOL		0x0A
+	#else
+		#define EOL_SYMBOL		0x0D
+	#endif
 	#include <stdio.h>
 	#include <ncurses.h>
-#elif (PLATFORM == PLATFORM_WIN32)
-	#define EOL_SYMBOL		0x0D
 
-	#include <stdio.h>
-	#include <ncurses.h>
+	inline int kbhit(WINDOW *w)
+	{
+		nodelay(w, TRUE);
+		int ch = wgetch(w);
+		nodelay(w, FALSE);
+		return ch;
+	}
 #elif (PLATFORM == PLATFORM_AVR)
 	#define EOL_SYMBOL		0x0A
 	#undef ENABLE_KEYBOARD_SUPPORT

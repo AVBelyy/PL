@@ -131,6 +131,11 @@ gets:
 	if (r0 == 3) ret
 	call putc('\n')
 	ret
+kbhit:
+	push 5
+	push 5
+	int 0x05
+	ret
 ttysize:
 	push 6
 	int 0x05

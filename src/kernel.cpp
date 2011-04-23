@@ -1,5 +1,6 @@
 #include <kernel.h>
 #include <interpretter.h>
+#include <io.h>
 
 struct __kernel_signal_t
 {
@@ -81,10 +82,17 @@ int main(int argc, char *argv[]) {
 	l.share();
 
 	app_t *app = apps;
+	win_t *win = wins;
 	do
 	{
+		if(kbhit(stdscr) == '\t')
+		{
+			win = (win->next == NULL ? wins : win->next);
+			sigexec(KERNEL_ATEXIT, NULL);
+			exit(0);
+		}
 		app->p->exec();
-	} while(app = (app->p->lockFlag ? app : (app->next == NULL ? apps : apps->next)));
+	} while(app = (app->p->lockFlag ? app : (app->next == NULL ? apps : app->next)));
 	//while(!feof((FILE*)p.f)) p.exec();
 	// At exit..
 	sigexec(KERNEL_ATEXIT, NULL);
