@@ -23,12 +23,16 @@ void kernel_signal(uint16_t type, void(*handler)(void *params), void *params)
 
 void sigexec(uint16_t type, void *params)
 {
-	for(int i = 0; i < __sighandlers_cnt; i++)
+	int i = __sighandlers_cnt;
+	do
+	{
+		--i;
 		if(__sighandlers[i].type & type)
 			if(__sighandlers[i].params == NULL)
 				__sighandlers[i].handler(params);
 			else
 				__sighandlers[i].handler(__sighandlers[i].params);
+	} while(i);
 }
 
 #if (PLATFORM == PLATFORM_UNIX)
@@ -87,10 +91,11 @@ int main(int argc, char *argv[]) {
 	{
 		if(kbhit(stdscr) == '\t')
 		{
-			sigexec(KERNEL_ATEXIT, NULL);
-			printf("DADA!\n");
+			
+			sigexec(KERNEL_ATCTRLC, NULL);
+			//printf("DADA!\n");
 			//win = (win->next == NULL ? wins : win->next);
-			printf("currently win=%d\n", win);
+			//printf("currently win=%d\n", win);
 			//IO::displayWindow(win->owner);
 			exit(0);
 		}

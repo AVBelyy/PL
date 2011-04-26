@@ -286,7 +286,7 @@ code:
 	call puts("Hello! I am LIBSTD.BIN. Press any key to continue")
 	call displaywin()
 	call refresh()
-	call getc()
+	call getcne()
 export:
 	delay, random, signal, time, localtime
 	hidecursor, showcursor

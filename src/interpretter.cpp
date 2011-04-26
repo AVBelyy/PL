@@ -27,15 +27,17 @@ uint8_t pcount = 0;
 
 void callproc(void *params)
 {
-	bool result;
-	callproc_t *info = reinterpret_cast<struct callproc_t*>(params);
+	struct callproc_t *info = reinterpret_cast<struct callproc_t*>(params);
 	process *p = info->p;
 	uint16_t procid = info->procid;
 	p->breakLevel = p->entryLevel+1;
 	p->owner = p;
+	printw("  dest=%d", info);
+	getch();
+	return;
 	// perform call
 	p->__call(procid);
-	while(result = p->exec() == true);
+	while(p->exec());
 	p->breakLevel = 0;
 }
 
@@ -274,7 +276,7 @@ bool process::exec() {
 		else if(cmd == 0x0E) regs[index]--;
 		break;
 	}
-	case 0x0F: // IF
+	case 0x0F:
 	{
 		char cond = fgetc(file);
 		p_operand lvalue = getop(), rvalue = getop();
@@ -369,7 +371,8 @@ bool process::exec() {
 				callproc_t sig;
 				sig.p = this;
 				sig.procid = regs[2];
-				kernel_signal(regs[1], &callproc, (void*)&sig);
+				printw("  pid_orig=%d pid_mod=%d", pid, sig.p->pid);
+				kernel_signal(regs[1], &callproc, reinterpret_cast<void*>(&sig));
 			}
 			else if(regs[0] == 5)	regs[0] = (unsigned)time(NULL); // UNIX time
 			else if(regs[0] == 6)	// local time

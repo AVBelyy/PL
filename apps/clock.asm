@@ -18,7 +18,7 @@ code:
 	# R7 - temp
 	# R8 - old seconds count
 	# R9 - blink flag
-	call signal(KERNEL_ATCTRLC atexit)
+	#call signal(KERNEL_ATCTRLC atexit)
 	call hidecursor()
 	call createwin()
 	label mainloop
