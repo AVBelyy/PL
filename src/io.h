@@ -23,14 +23,6 @@
 	#endif
 	#include <stdio.h>
 	#include <ncurses.h>
-
-	inline int kbhit(WINDOW *w)
-	{
-		nodelay(w, TRUE);
-		int ch = wgetch(w);
-		nodelay(w, FALSE);
-		return ch;
-	}
 #elif (PLATFORM == PLATFORM_AVR)
 	#define EOL_SYMBOL		0x0A
 	#undef ENABLE_KEYBOARD_SUPPORT
@@ -56,6 +48,7 @@ class IO
 	public:
 	static FILE **files;
 	static int filesCount;
+	static struct win_t *firstWindow;
 	static FILE *searchFile(int);
 	static void displayWindow(process*);
 	static void atexit(void*);

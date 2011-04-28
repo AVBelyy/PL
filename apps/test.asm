@@ -3,7 +3,6 @@
 header:
 	name = test
 atexit:
-	call clrscr()
 	call showcursor()
 	ret
 write:
@@ -16,10 +15,7 @@ code:
 	# R7 - direction
 	# (int)R8 - Max X coord
 	# (int)R9 - Max Y coord
-	push KERNEL_ATEXIT
-	or r0 KERNEL_ATCTRLC
-	push atexit
-	call signal
+	call signal(SIG_ATCTRLC atexit)
 	mov r5 1
 	mov r6 1
 	mov r7 1

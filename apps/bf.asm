@@ -12,8 +12,8 @@ code:
 	# R7 - current cell
 	# R8 - current command number
 	# R9 - entry level
-	push KERNEL_ATEXIT
-	or r0 KERNEL_ATCTRLC
+	push SIG_ATEXIT
+	or r0 SIG_ATCTRLC
 	push atexit
 	call signal()
 	call fopen("program.bf" "rb")

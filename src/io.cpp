@@ -17,12 +17,14 @@
 
 FILE **IO::files = (FILE**)malloc(sizeof(FILE*) * IO_MAXFILES);
 int IO::filesCount = 0;
+struct win_t *IO::firstWindow = NULL;
 
 void IO::displayWindow(process *p)
 {
 	for(int i = 0; i < pcount; i++) plist[i]->displayFlag = false;
 	p->displayFlag = true;
-	wrefresh(p->w);
+	wclear(p->w);
+	p->pushMessage(MSG_DISPLAY, 0);
 }
 
 FILE* IO::searchFile(int fd)
@@ -51,7 +53,6 @@ void IO::interrupt(process *p)
 			}
 			else if(p->regs[1] == 3) p->regs[0] = wgetch(p->w);
 			else if(p->regs[1] == 4) p->regs[0] = EOL_SYMBOL;
-			else if(p->regs[1] == 5) p->regs[0] = kbhit(p->w);
 		#else
 			p->regs[0] = 0;
 		#endif
@@ -141,7 +142,6 @@ void IO::interrupt(process *p)
 		if(p->regs[1] == 1 && p->displayFlag) wrefresh(p->w); // refresh window
 		else if(p->regs[1] == 2) // create window
 		{
-			static bool first = false;
 			int x, y;
 			getmaxyx(stdscr, y, x);
 			p->w = newwin(y-1, x, 0, 0);
@@ -150,10 +150,10 @@ void IO::interrupt(process *p)
 			win->owner = p;
 			win->next = wins;
 			wins = win;
-			if(!first)
+			if(firstWindow == NULL)
 			{
 				displayWindow(p);
-				first = true;
+				firstWindow = win;
 			}
 		}
 		else if(p->regs[1] == 3) displayWindow(p); // display window
@@ -187,7 +187,7 @@ IO::IO()
 	noecho();
 	scrollok(stdscr, TRUE);
 	// Handle ATEXIT & ATCTRLC signals
-	kernel_signal(KERNEL_ATEXIT | KERNEL_ATCTRLC, &atexit, NULL);
+	kernel_signal(SIG_ATEXIT | SIG_ATCTRLC, &atexit, NULL);
 	// Attach interrupt
 	process::attachInterrupt(0x05, &interrupt);
 };

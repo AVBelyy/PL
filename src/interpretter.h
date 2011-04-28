@@ -27,7 +27,7 @@
 #define HEAP_SIZE			65536
 
 // Signal types
-#define KERNEL_STARTPROCESS	4
+#define SIG_STARTPROCESS	4
 
 // Constants
 #define OP_CONST			0
@@ -79,6 +79,13 @@ struct int_handler
 	void (*handler)(process*);
 };
 
+struct msg_t
+{
+	uint16_t msg;
+	uint16_t params;
+	msg_t *next;
+};
+
 struct app_t
 {
 	process *p;
@@ -121,6 +128,7 @@ class process {
 	uint16_t staticPtr;
 	uint16_t errorCode;
 	WINDOW *w;
+	struct msg_t *msgStack;
 	process(char*);
 	uint16_t fgetint();
 	p_operand getop(bool = false);
@@ -128,6 +136,8 @@ class process {
 	void share();
 	void __call(uint16_t);
 	void extcall(uint16_t);
+	void pushMessage(uint16_t, uint16_t);
+	struct msg_t *popMessage();
 	static process* search(uint16_t);
 	static uint8_t attachInterrupt(uint8_t, void(*)(process*));
 };

@@ -14,9 +14,12 @@
 // Config
 #define	MAX_SIGHANDLERS		32
 
-// Signal types
-#define KERNEL_ATEXIT		1
-#define KERNEL_ATCTRLC		2
+// Signals
+#define SIG_ATEXIT			1
+#define SIG_ATCTRLC			2
+
+// Messages
+#define MSG_DISPLAY			1
 
 #include <stdint.h>
 #include <time.h>

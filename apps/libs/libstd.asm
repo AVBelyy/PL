@@ -27,6 +27,17 @@ localtime:
 	push 6
 	int 0x01
 	ret
+pushmsg:
+	mov r3 r2
+	mov r2 r1
+	mov r1 r0
+	push 7
+	int 0x01
+	ret
+popmsg:
+	push 8
+	int 0x01
+	ret
 strcpy:
 	label loop
 		mov *r0 *r1
@@ -130,11 +141,6 @@ gets:
 	if (r0 == 1) ret
 	if (r0 == 3) ret
 	call putc('\n')
-	ret
-kbhit:
-	push 5
-	push 5
-	int 0x05
 	ret
 ttysize:
 	push 6
@@ -279,16 +285,8 @@ noscroll:
 	push 0
 	int 0x05
 	ret
-code:
-	call ttysize()
-	push 1
-	call gotoxy()
-	call puts("Hello! I am LIBSTD.BIN. Press any key to continue")
-	call displaywin()
-	call refresh()
-	call getcne()
 export:
-	delay, random, signal, time, localtime
+	delay, random, signal, time, localtime, pushmsg, popmsg
 	hidecursor, showcursor
 	clrscr, gotoxy, ttysize
 	fopen, fgetc, fsize, fseek, fputc, fputs, fgets

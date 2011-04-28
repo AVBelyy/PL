@@ -32,9 +32,6 @@ void callproc(void *params)
 	uint16_t procid = info->procid;
 	p->breakLevel = p->entryLevel+1;
 	p->owner = p;
-	printw("  dest=%d", info);
-	getch();
-	return;
 	// perform call
 	p->__call(procid);
 	while(p->exec());
@@ -153,13 +150,15 @@ process::process(char *path)
 		app->next = apps;
 		apps = app;
 	}
+	// initialize message stack
+	msgStack = NULL;
 	// by default use 'stdscr' as program's window
 	displayFlag = false;
 	w = stdscr;
 	// insert process in process list
 	plist[pcount++] = this;
 	// exec signal
-	sigexec(KERNEL_STARTPROCESS, (void*)this);
+	sigexec(SIG_STARTPROCESS, (void*)this);
 }
 uint16_t process::fgetint() {
 	FILE *file = (FILE*)owner->f;
@@ -371,7 +370,6 @@ bool process::exec() {
 				callproc_t sig;
 				sig.p = this;
 				sig.procid = regs[2];
-				printw("  pid_orig=%d pid_mod=%d", pid, sig.p->pid);
 				kernel_signal(regs[1], &callproc, reinterpret_cast<void*>(&sig));
 			}
 			else if(regs[0] == 5)	regs[0] = (unsigned)time(NULL); // UNIX time
@@ -382,17 +380,35 @@ bool process::exec() {
 				struct tm *t = localtime(&unixtime);
 				char timedata[] =
 				{
-					t->tm_sec >> 8, t->tm_sec & 0xFF,
-					t->tm_min >> 8, t->tm_min & 0xFF,
-					t->tm_hour >> 8, t->tm_hour & 0xFF,
-					t->tm_mday >> 8, t->tm_mday & 0xFF,
-					t->tm_mon >> 8, t->tm_mon & 0xFF,
-					t->tm_year >> 8, t->tm_year & 0xFF,
-					t->tm_wday >> 8, t->tm_wday & 0xFF,
+					0, t->tm_sec,
+					0, t->tm_min,
+					0, t->tm_hour,
+					0, t->tm_mday,
+					0, t->tm_mon,
+					0, t->tm_year,
+					0, t->tm_wday,
 					t->tm_yday >> 8, t->tm_yday & 0xFF,
-					t->tm_isdst >> 8, t->tm_isdst & 0xFF
+					0, t->tm_isdst
 				};
 				memcpy((void*)(heap + regs[1]), (void*)timedata, sizeof(timedata));
+			}
+			else if(regs[0] == 7)	// push message
+			{
+				 process *p = process::search(regs[1]);
+				 if(p != NULL)
+					p->pushMessage(regs[2], regs[3]);
+			}
+			else if(regs[0] == 8)	// pop message
+			{
+				struct msg_t *message = popMessage();
+				if(message == NULL)
+					regs[0] = regs[1] = 0;
+				else
+				{
+					regs[0] = message->msg;
+					regs[1] = message->params;
+					free(message); // remove message from memory
+				}
 			}
 			break;
 		}
@@ -448,6 +464,21 @@ void process::extcall(uint16_t procid)
     while(result = exec() == true);
     breakLevel = 0;
 
+}
+void process::pushMessage(uint16_t msg, uint16_t params)
+{
+	msg_t *message = (msg_t*)malloc(sizeof(msg_t*));
+	message->msg = msg;
+	message->params = params;
+	message->next = msgStack;
+	msgStack = message; 
+}
+struct msg_t *process::popMessage()
+{
+	struct msg_t *stack = msgStack;
+	if(msgStack != NULL)
+		msgStack = msgStack->next;
+	return stack;
 }
 uint8_t process::attachInterrupt(uint8_t id, void (*handler)(process*)) {
 	for(int i = 0; i < MAX_INTERRUPT; i++) if(!interrupts[i].id) {

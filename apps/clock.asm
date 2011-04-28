@@ -9,7 +9,6 @@ static:
 	buffer		string[4]
 	timeinfo	tm
 atexit:
-	call clrscr()
 	call showcursor()
 	ret
 code:
@@ -18,7 +17,7 @@ code:
 	# R7 - temp
 	# R8 - old seconds count
 	# R9 - blink flag
-	#call signal(KERNEL_ATCTRLC atexit)
+	call signal(SIG_ATCTRLC atexit)
 	call hidecursor()
 	call createwin()
 	label mainloop

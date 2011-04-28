@@ -35,10 +35,17 @@ void sigexec(uint16_t type, void *params)
 	} while(i);
 }
 
+void __winswitch(int sig)
+{
+	static win_t *win = IO::firstWindow;
+	if(win == NULL) return; // if there's no windows
+	win = (win->next == NULL ? wins : win->next);
+	IO::displayWindow(win->owner);
+}
 #if (PLATFORM == PLATFORM_UNIX)
 void __atctrlc(int sig)
 {
-	sigexec(KERNEL_ATCTRLC, NULL);
+	sigexec(SIG_ATCTRLC, NULL);
 	exit(1);
 }
 #elif (PLATFORM == PLATFORM_WIN32)
@@ -46,9 +53,10 @@ BOOL WINAPI __CtrlHandler(DWORD dwCtrlType)
 {
 	if(dwCtrlType == CTRL_C_EVENT)
 	{
-		sigexec(KERNEL_ATCTRLC, NULL);
+		sigexec(SIG_ATCTRLC, NULL);
 		exit(1);
 	}
+	// TODO: Handle CTRL-\ as window switching combination
 	return TRUE;
 }
 #endif
@@ -57,7 +65,7 @@ int main(int argc, char *argv[]) {
 	#ifdef __DEBUG__
 		if(argc < 2)
 		{
-			sigexec(KERNEL_ATEXIT, NULL); // reset normal terminal state
+			sigexec(SIG_ATEXIT, NULL); // reset normal terminal state
 			printf("Usage: %s FILE [ARGS]\n", argv[0]);
 			return 1;
 		}
@@ -73,36 +81,26 @@ int main(int argc, char *argv[]) {
 	// initialize
 	for(int i = 0; i < MAX_PROCESS; i++) plist[i] = (process*)malloc(sizeof(process*));
 	srand((unsigned)time(NULL));
-	// set Ctrl-C handlers
+	// set Ctrl-C & window switch handlers
 	#if (PLATFORM == PLATFORM_UNIX)
 		signal(SIGINT, &__atctrlc);
+		signal(SIGQUIT, &__winswitch);
 	#elif (PLATFORM == PLATFORM_WIN32)
 		SetConsoleCtrlHandler((PHANDLER_ROUTINE)__CtrlHandler, TRUE);
 	#endif
+	// set window switch handler
 	process l("libstd.bin");
-	process p1("clock.bin");
-	process p2("test.bin");
+	process p1("1.bin");
+	process p2("2.bin");
 	//process p3("bf.bin");
 	l.share();
 
 	app_t *app = apps;
-	win_t *win = wins;
 	do
 	{
-		if(kbhit(stdscr) == '\t')
-		{
-			
-			sigexec(KERNEL_ATCTRLC, NULL);
-			//printf("DADA!\n");
-			//win = (win->next == NULL ? wins : win->next);
-			//printf("currently win=%d\n", win);
-			//IO::displayWindow(win->owner);
-			exit(0);
-		}
 		app->p->exec();
 	} while(app = (app->p->lockFlag ? app : (app->next == NULL ? apps : app->next)));
-	//while(!feof((FILE*)p.f)) p.exec();
 	// At exit..
-	sigexec(KERNEL_ATEXIT, NULL);
+	sigexec(SIG_ATEXIT, NULL);
 	return 0;
 }
