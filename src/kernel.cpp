@@ -90,9 +90,8 @@ int main(int argc, char *argv[]) {
 	#endif
 	// set window switch handler
 	process l("libstd.bin");
-	process p1("1.bin");
-	process p2("2.bin");
-	//process p3("bf.bin");
+	process p1("test.bin");
+	process p2("bf.bin");
 	l.share();
 
 	app_t *app = apps;

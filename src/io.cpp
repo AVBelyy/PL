@@ -23,7 +23,8 @@ void IO::displayWindow(process *p)
 {
 	for(int i = 0; i < pcount; i++) plist[i]->displayFlag = false;
 	p->displayFlag = true;
-	wclear(p->w);
+	touchwin(p->w);
+	wrefresh(p->w);
 	p->pushMessage(MSG_DISPLAY, 0);
 }
 
@@ -139,12 +140,16 @@ void IO::interrupt(process *p)
 	}
 	else if(p->regs[0] == 10)
 	{
-		if(p->regs[1] == 1 && p->displayFlag) wrefresh(p->w); // refresh window
+		if(p->regs[1] == 1 && p->displayFlag)
+		{
+			wnoutrefresh(p->w);
+			if(p->displayFlag) doupdate(); // refresh screen
+		}
 		else if(p->regs[1] == 2) // create window
 		{
 			int x, y;
 			getmaxyx(stdscr, y, x);
-			p->w = newwin(y-1, x, 0, 0);
+			p->w = newwin(y, x, 0, 0);
 			scrollok(p->w, TRUE); // enable auto-scroll
 			win_t *win = (win_t*)malloc(sizeof(win_t*));
 			win->owner = p;
