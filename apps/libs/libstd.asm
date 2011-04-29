@@ -131,6 +131,7 @@ gets:
 	label read
 		call getc()
 		if (r0==r3) goto break
+		ret
 		mov *r2 r0
 		inc r2
 	goto read

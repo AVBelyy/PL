@@ -16,8 +16,8 @@
 #endif
 
 FILE **IO::files = (FILE**)malloc(sizeof(FILE*) * IO_MAXFILES);
+WINDOW *IO::statusbar = (WINDOW*)malloc(sizeof(WINDOW*));
 int IO::filesCount = 0;
-struct win_t *IO::firstWindow = NULL;
 
 void IO::displayWindow(process *p)
 {
@@ -26,6 +26,9 @@ void IO::displayWindow(process *p)
 	touchwin(p->w);
 	wrefresh(p->w);
 	p->pushMessage(MSG_DISPLAY, 0);
+	wclear(statusbar);
+	wprintw(statusbar, "name=%s pid=%d", p->name, p->pid);
+	wrefresh(statusbar);
 }
 
 FILE* IO::searchFile(int fd)
@@ -48,9 +51,9 @@ void IO::interrupt(process *p)
 			if(p->regs[1] == 1) p->regs[0] = 1;
 			else if(p->regs[1] == 2)
 			{
-				char c = wgetch(p->w);
-				waddch(p->w, c);
-				p->regs[0] = c;
+				//char c = wgetch(p->w);
+				//waddch(p->w, '1');
+				//p->regs[0] = '0';
 			}
 			else if(p->regs[1] == 3) p->regs[0] = wgetch(p->w);
 			else if(p->regs[1] == 4) p->regs[0] = EOL_SYMBOL;
@@ -155,21 +158,37 @@ void IO::interrupt(process *p)
 			win->owner = p;
 			win->next = wins;
 			wins = win;
-			if(firstWindow == NULL)
+			if(curwin == NULL)
 			{
 				displayWindow(p);
-				firstWindow = win;
+				curwin = win;
 			}
 		}
 		else if(p->regs[1] == 3) displayWindow(p); // display window
-		else if(p->regs[1] == 4) // get window
+		else if(p->regs[1] == 4) // set window
 		{
-			if(p->regs[2] == 256)
+			switch(p->regs[2])
+			{
+			case 256: // WN_STDSCR
+			{
 				p->w = stdscr;
-			else
+				break;
+			}
+			case 257: // WN_STATUSBAR
+			{
+				p->w = statusbar;
+				break;
+			}
+			case 258: // WN_CURRENT
+			{
+				if(curwin != NULL) p->w = curwin->owner->w;
+				break; 
+			}
+			default:
 			{
 				process *other = process::search(p->regs[2]);
 				if(other != NULL) p->w = other->w;
+			}
 			}
 		}
 		else if(p->regs[1] == 5) // scrollok
@@ -186,11 +205,15 @@ void IO::atexit(void *params)
 
 IO::IO()
 {
+	int x, y;
 	for(int i = 0; i < IO_MAXFILES; i++) files[i] = (FILE*)malloc(sizeof(FILE*));
 	// Init ncurses
 	initscr();
 	noecho();
-	scrollok(stdscr, TRUE);
+	getmaxyx(stdscr, y, x);
+	wresize(stdscr, y-1, x);
+	// Create status bar
+	statusbar = newwin(1, x, y-1, 0);
 	// Handle ATEXIT & ATCTRLC signals
 	kernel_signal(SIG_ATEXIT | SIG_ATCTRLC, &atexit, NULL);
 	// Attach interrupt

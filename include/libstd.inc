@@ -6,7 +6,9 @@ const:
 	SEEK_SET			0
 	SEEK_CUR			1
 	SEEK_END			2
-	STDSCR				256
+	WN_STDSCR			256
+	WN_STATUSBAR		257
+	WN_CURRENT			258				
 
 	# Signals
 	SIG_ATEXIT			1

@@ -37,10 +37,9 @@ void sigexec(uint16_t type, void *params)
 
 void __winswitch(int sig)
 {
-	static win_t *win = IO::firstWindow;
-	if(win == NULL) return; // if there's no windows
-	win = (win->next == NULL ? wins : win->next);
-	IO::displayWindow(win->owner);
+	if(curwin == NULL) return; // if there's no windows
+	curwin = (curwin->next == NULL ? wins : curwin->next);
+	IO::displayWindow(curwin->owner);
 }
 #if (PLATFORM == PLATFORM_UNIX)
 void __atctrlc(int sig)
@@ -95,9 +94,19 @@ int main(int argc, char *argv[]) {
 	l.share();
 
 	app_t *app = apps;
+	process *curP;
+	clock_t curTime;
 	do
 	{
-		app->p->exec();
+		curP = app->p;
+		if(curP->stopTime != -1)
+		{
+			if((clock() - curP->stopTime) < curP->delayTime)
+				continue;
+			else
+				curP->stopTime = -1;
+		}
+		curP->exec();
 	} while(app = (app->p->lockFlag ? app : (app->next == NULL ? apps : app->next)));
 	// At exit..
 	sigexec(SIG_ATEXIT, NULL);

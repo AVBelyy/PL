@@ -9,21 +9,10 @@ using namespace std;
 uint8_t heap[HEAP_SIZE+1];
 app_t *apps = NULL;
 win_t *wins = NULL;
+win_t *curwin = NULL;
 process *plist[MAX_PROCESS];
 int_handler interrupts[MAX_INTERRUPT];
 uint8_t pcount = 0;
-
-#if (PLATFORM == PLATFORM_UNIX)
-	inline void delay(uint16_t ms)
-	{
-		usleep((uint32_t)ms * 1000);
-	}
-#elif (PLATFORM == PLATFORM_WIN32)
-	inline void delay(uint16_t ms)
-	{
-		Sleep(ms);
-	}
-#endif
 
 void callproc(void *params)
 {
@@ -68,7 +57,7 @@ void heap_free(uint16_t ptr)
 	if(size) memset((void*)(heap + ptr - 2), '\0', size + 2);
 }
 
-process::process(char *path)
+process::process(char *path, process *_parent) : parent(_parent)
 {
 	int i, len;
 	errorCode = ERR_OK;
@@ -150,11 +139,10 @@ process::process(char *path)
 		app->next = apps;
 		apps = app;
 	}
+	stopTime = -1;
 	// initialize message stack
-	msgStack = NULL;
-	// by default use 'stdscr' as program's window
 	displayFlag = false;
-	w = stdscr;
+	w = NULL;
 	// insert process in process list
 	plist[pcount++] = this;
 	// exec signal
@@ -224,7 +212,7 @@ bool process::exec() {
 	if(feof(file)) return false;
 	switch(cmd)
 	{
-	#ifdef __DEBUG__
+	#ifndef __DEBUG__
 	case 0x00: // NOP
 	{
 		if(resultFlag)
@@ -271,11 +259,11 @@ bool process::exec() {
 	{
 		uint16_t index = fgetc(file);
 		if(!resultFlag) break;
-		if(cmd == 0x0D)		 regs[index]++;
-		else if(cmd == 0x0E) regs[index]--;
+		if(cmd == 0x0D)		 ++regs[index];
+		else if(cmd == 0x0E) --regs[index];
 		break;
 	}
-	case 0x0F:
+	case 0x0F: // IF
 	{
 		char cond = fgetc(file);
 		p_operand lvalue = getop(), rvalue = getop();
@@ -363,7 +351,11 @@ bool process::exec() {
 		case 0x01: // INT 0x01
 		{
 			if(regs[0] == 1)		regs[0] = PLATFORM; // get platform
-			else if(regs[0] == 2)	delay(regs[1]); // delay
+			else if(regs[0] == 2)	// delay
+			{
+				stopTime = clock();
+				delayTime = regs[1] * CLOCKS_PER_SEC / 1000;
+			}
 			else if(regs[0] == 3)	regs[0] = rand() % 0x8000; // random
 			else if(regs[0] == 4)	// signal
 			{
@@ -409,6 +401,11 @@ bool process::exec() {
 					regs[1] = message->params;
 					free(message); // remove message from memory
 				}
+			}
+			else if(regs[0] == 9)	// exec
+			{
+				process p((char*)(heap + regs[1]));
+				regs[0] = (p.errorCode == ERR_OK ? p.pid : 256);
 			}
 			break;
 		}

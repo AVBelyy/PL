@@ -14,9 +14,7 @@
 #if (PLATFORM == PLATFORM_AVR)
 	#include <avr/pgmspace.h>
 #elif (PLATFORM == PLATFORM_UNIX) || (PLATFORM == PLATFORM_WIN32)
-	#if (PLATFORM == PLATFORM_UNIX)
-		#include <unistd.h>
-	#endif
+	#include <time.h>
 	#include <ncurses.h>
 #endif
 
@@ -104,6 +102,7 @@ extern win_t *wins;
 extern process *plist[MAX_PROCESS];
 extern int_handler interrupts[MAX_INTERRUPT];
 extern uint8_t pcount;
+extern win_t *curwin;
 
 void callproc(void*);
 uint16_t heap_alloc(uint16_t size);
@@ -128,8 +127,10 @@ class process {
 	uint16_t staticPtr;
 	uint16_t errorCode;
 	WINDOW *w;
-	struct msg_t *msgStack;
-	process(char*);
+	msg_t *msgStack;
+	clock_t stopTime, delayTime;
+	process *parent;
+	process(char*, process* = NULL);
 	uint16_t fgetint();
 	p_operand getop(bool = false);
 	bool exec();
@@ -137,7 +138,7 @@ class process {
 	void __call(uint16_t);
 	void extcall(uint16_t);
 	void pushMessage(uint16_t, uint16_t);
-	struct msg_t *popMessage();
+	msg_t *popMessage();
 	static process* search(uint16_t);
 	static uint8_t attachInterrupt(uint8_t, void(*)(process*));
 };

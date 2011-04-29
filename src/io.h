@@ -48,7 +48,7 @@ class IO
 	public:
 	static FILE **files;
 	static int filesCount;
-	static struct win_t *firstWindow;
+	static WINDOW *statusbar;
 	static FILE *searchFile(int);
 	static void displayWindow(process*);
 	static void atexit(void*);

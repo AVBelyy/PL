@@ -2,6 +2,8 @@
 
 const:
 	MEM_SIZE	30000
+header:
+	name = bf
 atexit:
 	# dealloc brainfuck cells
 	free r7
@@ -19,8 +21,8 @@ code:
 	call fopen("program.bf" "rb")
 	mov r6 r0
 	alloc r7 MEM_SIZE
-	if ( r7 == NULL ) goto heap_error
 	call createwin()
+	if ( r7 == NULL ) goto heap_error
 	label exec
 		call fgetc( r6 )
 		if ( r0 == EOF ) goto end
